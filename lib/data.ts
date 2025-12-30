@@ -167,6 +167,17 @@ export const spotifyFinds: SpotifyFind[] = [
     dateAdded: "2025-12-31",
     genre: "Hip Hop",
   },
+  {
+    id: "find-15",
+    title: "18",
+    artist: "Mosquit",
+    type: "track",
+    spotifyUrl: "https://open.spotify.com/track/2s4v4UNqeWab6KIP7Axwha",
+    spotifyId: "2s4v4UNqeWab6KIP7Axwha",
+    description: "",
+    dateAdded: "2025-12-31",
+    genre: "Hip Hop",
+  },
 ];
 export function getFindById(id: string): SpotifyFind | undefined {
   return spotifyFinds.find((find) => find.id === id);
