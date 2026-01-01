@@ -1,25 +1,79 @@
 "use client";
 
-import { useState } from "react";
-import { spotifyFinds, type FindType } from "@/lib/data";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { type FindType } from "@/lib/data";
 import FindList from "@/components/FindList";
 import { ThemeToggle } from "@/components/theme-toggle";
 import CircularText from "@/components/CircularText";
 import TypeFilter from "@/components/TypeFilter";
 import GenreFilter from "@/components/GenreFilter";
 import DateSort from "@/components/DateSort";
+import { Plus } from "lucide-react";
 
 type SortOrder = "newest" | "oldest";
 
+interface SpotifyFind {
+  id: string;
+  title: string;
+  artist: string;
+  type: FindType;
+  spotifyUrl: string;
+  spotifyId: string;
+  imageUrl?: string;
+  description?: string;
+  dateAdded: string;
+  genre?: string;
+  userId: string;
+  user?: {
+    name: string | null;
+    email: string;
+  };
+}
+
 export default function Home() {
+  const { data: session } = useSession();
+  const [finds, setFinds] = useState<SpotifyFind[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
+  const [viewMode, setViewMode] = useState<"all" | "mine">("all");
   const [selectedType, setSelectedType] = useState<FindType | "all">("all");
   const [selectedGenre, setSelectedGenre] = useState<string | "all">("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
 
-  const filteredFinds = spotifyFinds.filter((find) => {
+  useEffect(() => {
+    async function fetchFinds() {
+      try {
+        const response = await fetch("/api/finds");
+        if (response.ok) {
+          const data = await response.json();
+          setFinds(data);
+        } else {
+          setError("Failed to load music");
+        }
+      } catch (error) {
+        setError("Failed to load music");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchFinds();
+  }, []);
+
+  const filteredFinds = finds.filter((find) => {
     const typeMatch = selectedType === "all" || find.type === selectedType;
     const genreMatch = selectedGenre === "all" || find.genre === selectedGenre;
-    return typeMatch && genreMatch;
+
+    // Filter by view mode
+    let viewMatch = true;
+    if (viewMode === "mine" && session?.user) {
+      viewMatch = find.userId === (session.user as any).id;
+    }
+
+    return typeMatch && genreMatch && viewMatch;
   });
 
   const sortedFinds = [...filteredFinds].sort((a, b) => {
@@ -60,12 +114,65 @@ export default function Home() {
           <ThemeToggle />
         </div>
         <main className="container mx-auto px-4 py-8 pt-24 md:pt-8">
-          <div className="flex flex-wrap gap-4 mb-6">
+          <div className="flex flex-wrap gap-4 mb-6 items-center">
+            {session && (
+              <div className="flex items-center bg-secondary/50 rounded-lg p-1 mr-4">
+                <button
+                  onClick={() => setViewMode("all")}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === "all"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  Following
+                </button>
+                <button
+                  onClick={() => setViewMode("mine")}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === "mine"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  My Music
+                </button>
+              </div>
+            )}
             <TypeFilter selectedType={selectedType} onTypeChange={setSelectedType} />
             <GenreFilter selectedGenre={selectedGenre} onGenreChange={setSelectedGenre} />
             <DateSort sortOrder={sortOrder} onSortChange={setSortOrder} />
+
+            {session && (
+              <Link
+                href="/add"
+                className="ml-auto inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Add Music
+              </Link>
+            )}
           </div>
-          <FindList finds={sortedFinds} />
+
+          {loading && (
+            <div className="text-center py-12 text-muted-foreground">
+              Loading music...
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-12 text-destructive">
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && sortedFinds.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No music found. {session && "Be the first to add some!"}
+            </div>
+          )}
+
+          {!loading && !error && sortedFinds.length > 0 && (
+            <FindList finds={sortedFinds} />
+          )}
         </main>
       </div>
     </div>

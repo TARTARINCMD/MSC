@@ -22,7 +22,7 @@ export default function FindCardWithTilt({ find }: FindCardProps) {
         const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(find.spotifyUrl)}`;
         const response = await fetch(oembedUrl);
         const data = await response.json();
-        
+
         if (data.thumbnail_url) {
           setImageUrl(data.thumbnail_url);
         }
@@ -64,7 +64,7 @@ export default function FindCardWithTilt({ find }: FindCardProps) {
           showTooltip={false}
           displayOverlayContent={false}
         />
-        
+
         <div className="mt-4 flex flex-col flex-grow">
           <div className="mb-2 flex flex-wrap gap-2">
             <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize">
@@ -73,6 +73,11 @@ export default function FindCardWithTilt({ find }: FindCardProps) {
             {find.genre && (
               <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
                 {find.genre}
+              </span>
+            )}
+            {find.user?.name && (
+              <span className="inline-block rounded-full bg-primary/20 px-2 py-1 text-xs font-medium text-primary capitalize flex items-center gap-1">
+                <span className="opacity-70">by</span> {find.user.name}
               </span>
             )}
           </div>

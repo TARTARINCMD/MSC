@@ -25,10 +25,15 @@ export default function FindCard({ find }: FindCardProps) {
         </div>
 
         <div className="p-4">
-          <div className="mb-2">
+          <div className="mb-2 flex flex-wrap gap-2">
             <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize">
               {find.type}
             </span>
+            {find.user?.name && (
+              <span className="inline-block rounded-full bg-primary/20 px-2 py-1 text-xs font-medium text-primary capitalize flex items-center gap-1">
+                <span className="opacity-70">by</span> {find.user.name}
+              </span>
+            )}
           </div>
           <h3 className="mb-1 text-lg font-semibold text-card-foreground line-clamp-1">
             {find.title}

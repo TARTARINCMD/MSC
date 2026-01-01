@@ -11,6 +11,11 @@ export interface SpotifyFind {
   description?: string;
   dateAdded: string;
   genre?: string;
+  userId?: string;
+  user?: {
+    name: string | null;
+    email: string | null;
+  };
 }
 export const spotifyFinds: SpotifyFind[] = [
   {
