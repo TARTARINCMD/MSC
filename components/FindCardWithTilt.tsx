@@ -6,9 +6,11 @@ import TiltedCard from "./TiltedCard";
 
 interface FindCardProps {
   find: SpotifyFind;
+  onTypeClick?: (type: string) => void;
+  onGenreClick?: (genre: string) => void;
 }
 
-export default function FindCardWithTilt({ find }: FindCardProps) {
+export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: FindCardProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(find.imageUrl || null);
 
   useEffect(() => {
@@ -42,6 +44,14 @@ export default function FindCardWithTilt({ find }: FindCardProps) {
     );
   }
 
+  const isNew = (() => {
+    const addedDate = new Date(find.dateAdded);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - addedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 3;
+  })();
+
   return (
     <a
       href={find.spotifyUrl}
@@ -49,7 +59,7 @@ export default function FindCardWithTilt({ find }: FindCardProps) {
       rel="noopener noreferrer"
       className="block w-full h-full group"
     >
-      <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-colors duration-200 group-hover:bg-muted">
+      <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-colors duration-200 group-hover:bg-muted relative">
         <TiltedCard
           imageSrc={imageUrl}
           altText={`${find.title} by ${find.artist}`}
@@ -67,11 +77,28 @@ export default function FindCardWithTilt({ find }: FindCardProps) {
 
         <div className="mt-4 flex flex-col flex-grow">
           <div className="mb-2 flex flex-wrap gap-2">
-            <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize">
+            {isNew && (
+              <span className="inline-block rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-500 capitalize animate-pulse">
+                New
+              </span>
+            )}
+            <span
+              onClick={(e) => {
+                e.preventDefault();
+                onTypeClick?.(find.type);
+              }}
+              className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize cursor-pointer hover:opacity-80 transition-opacity"
+            >
               {find.type}
             </span>
             {find.genre && (
-              <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+              <span
+                onClick={(e) => {
+                  e.preventDefault();
+                  onGenreClick?.(find.genre!);
+                }}
+                className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground cursor-pointer hover:opacity-80 transition-opacity"
+              >
                 {find.genre}
               </span>
             )}

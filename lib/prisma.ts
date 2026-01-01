@@ -12,7 +12,16 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-const pool = new Pool({ connectionString });
+console.log("DB URL Check:", {
+  exists: !!connectionString,
+  prefix: connectionString?.substring(0, 20) + "..."
+});
+
+const pool = new Pool({
+  connectionString,
+  ssl: true,
+  max: 10 // connection pool size
+});
 const adapter = new PrismaPg(pool);
 
 export const prisma =

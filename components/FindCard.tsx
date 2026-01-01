@@ -6,6 +6,14 @@ interface FindCardProps {
 }
 
 export default function FindCard({ find }: FindCardProps) {
+  const isNew = (() => {
+    const addedDate = new Date(find.dateAdded);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - addedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 3;
+  })();
+
   return (
     <a
       href={find.spotifyUrl}
@@ -13,7 +21,7 @@ export default function FindCard({ find }: FindCardProps) {
       rel="noopener noreferrer"
       className="group block"
     >
-      <div className="h-full rounded-lg border border-border bg-card transition-all hover:shadow-lg hover:scale-[1.02] group-hover:border-primary/50">
+      <div className="h-full rounded-lg border border-border bg-card transition-all hover:shadow-lg hover:scale-[1.02] group-hover:border-primary/50 relative">
         <div className="relative aspect-square w-full overflow-hidden rounded-t-lg">
           <SpotifyImage
             spotifyUrl={find.spotifyUrl}
@@ -26,6 +34,11 @@ export default function FindCard({ find }: FindCardProps) {
 
         <div className="p-4">
           <div className="mb-2 flex flex-wrap gap-2">
+            {isNew && (
+              <span className="inline-block rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-500 capitalize animate-pulse">
+                New
+              </span>
+            )}
             <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize">
               {find.type}
             </span>

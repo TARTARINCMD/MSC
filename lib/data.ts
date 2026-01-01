@@ -1,4 +1,4 @@
-export type FindType = "track" | "album" | "playlist";
+export type FindType = "track" | "album" | "playlist" | "podcast";
 
 export interface SpotifyFind {
   id: string;

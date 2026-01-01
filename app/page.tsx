@@ -171,7 +171,11 @@ export default function Home() {
           )}
 
           {!loading && !error && sortedFinds.length > 0 && (
-            <FindList finds={sortedFinds} />
+            <FindList
+              finds={sortedFinds}
+              onTypeClick={setSelectedType}
+              onGenreClick={setSelectedGenre}
+            />
           )}
         </main>
       </div>

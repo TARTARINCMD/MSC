@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         const type = pathParts[pathParts.length - 2];
         const id = pathParts[pathParts.length - 1];
 
-        if (!["track", "album", "playlist"].includes(type)) {
+        if (!["track", "album", "playlist", "episode", "show"].includes(type)) {
             return NextResponse.json({ error: "Unsupported Spotify link type" }, { status: 400 });
         }
 
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
             title: "",
             artist: "",
             imageUrl: "",
-            type: type,
+            type: type, // 'episode' or 'show' will be mapped to 'podcast' on client side if needed, or we can normalize here. logic above keeps it raw.
             spotifyId: id,
         };
 
@@ -91,7 +91,21 @@ export async function POST(request: Request) {
             if (!res.ok) throw new Error("Failed to fetch playlist");
             const data = await res.json();
             metadata.title = data.name;
-            metadata.artist = data.owner.display_name; // For playlists, maybe owner name?
+            metadata.artist = data.owner.display_name;
+            metadata.imageUrl = data.images[0]?.url;
+        } else if (type === "episode") {
+            const res = await fetch(`${SPOTIFY_API_BASE}/episodes/${id}`, { headers });
+            if (!res.ok) throw new Error("Failed to fetch episode");
+            const data = await res.json();
+            metadata.title = data.name;
+            metadata.artist = data.show.name; // Show name as artist
+            metadata.imageUrl = data.images[0]?.url;
+        } else if (type === "show") {
+            const res = await fetch(`${SPOTIFY_API_BASE}/shows/${id}`, { headers });
+            if (!res.ok) throw new Error("Failed to fetch show");
+            const data = await res.json();
+            metadata.title = data.name;
+            metadata.artist = data.publisher; // Publisher as artist
             metadata.imageUrl = data.images[0]?.url;
         }
 

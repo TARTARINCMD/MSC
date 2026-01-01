@@ -5,9 +5,11 @@ import FindCardWithTilt from "./FindCardWithTilt";
 
 interface FindListProps {
   finds: SpotifyFind[];
+  onTypeClick?: (type: any) => void;
+  onGenreClick?: (genre: string) => void;
 }
 
-export default function FindList({ finds }: FindListProps) {
+export default function FindList({ finds, onTypeClick, onGenreClick }: FindListProps) {
   if (finds.length === 0) {
     return (
       <div className="py-12 text-center animate-in fade-in duration-300">
@@ -27,7 +29,11 @@ export default function FindList({ finds }: FindListProps) {
             animationFillMode: "both",
           }}
         >
-          <FindCardWithTilt find={find} />
+          <FindCardWithTilt
+            find={find}
+            onTypeClick={onTypeClick}
+            onGenreClick={onGenreClick}
+          />
         </div>
       ))}
     </div>

@@ -27,7 +27,7 @@ export default function AddFindPage() {
   }
 
   const extractSpotifyId = (url: string): string | null => {
-    const match = url.match(/spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/);
+    const match = url.match(/spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/);
     return match ? match[2] : null;
   };
 
@@ -36,7 +36,7 @@ export default function AddFindPage() {
     if (!url) return;
 
     // Check if it's a valid spotify URL before making an API call
-    const match = url.match(/spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/);
+    const match = url.match(/spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/);
     if (!match) return;
 
     setIsFetchingMetadata(true);
@@ -49,11 +49,17 @@ export default function AddFindPage() {
 
       if (res.ok) {
         const metadata = await res.json();
+
+        let type = metadata.type;
+        if (type === 'episode' || type === 'show') {
+          type = 'podcast';
+        }
+
         setFormData((prev) => ({
           ...prev,
           title: metadata.title || prev.title,
           artist: metadata.artist || prev.artist,
-          type: metadata.type as any,
+          type: type as any,
           spotifyUrl: url,
           imageUrl: metadata.imageUrl || "",
         }));
@@ -183,6 +189,7 @@ export default function AddFindPage() {
               <option value="track">Track</option>
               <option value="album">Album</option>
               <option value="playlist">Playlist</option>
+              <option value="podcast">Podcast</option>
             </select>
           </div>
 
