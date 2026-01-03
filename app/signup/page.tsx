@@ -21,6 +21,12 @@ export default function SignupPage() {
         e.preventDefault();
         setError("");
 
+        // Validate name
+        if (!formData.name.trim()) {
+            setError("Name is required");
+            return;
+        }
+
         // Validate passwords match
         if (formData.password !== formData.confirmPassword) {
             setError("Passwords do not match");
@@ -110,7 +116,8 @@ export default function SignupPage() {
                                 onChange={(e) =>
                                     setFormData({ ...formData, name: e.target.value })
                                 }
-                                placeholder="Optional"
+                                placeholder="Your name"
+                                required
                                 className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                             />
                         </div>

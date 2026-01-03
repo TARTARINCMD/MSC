@@ -7,9 +7,9 @@ export async function POST(request: Request) {
         const { email, password, name } = await request.json();
 
         // Validate input
-        if (!email || !password) {
+        if (!email || !password || !name) {
             return NextResponse.json(
-                { error: "Email and password are required" },
+                { error: "Name, email and password are required" },
                 { status: 400 }
             );
         }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
             data: {
                 email,
                 password: hashedPassword,
-                name: name || null,
+                name,
             },
         });
 

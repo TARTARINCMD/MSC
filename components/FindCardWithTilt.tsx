@@ -1,17 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import type { SpotifyFind } from "@/lib/data";
 import TiltedCard from "./TiltedCard";
+import { Heart } from "lucide-react";
 
 interface FindCardProps {
-  find: SpotifyFind;
+  find: SpotifyFind & { likeCount?: number; liked?: boolean };
   onTypeClick?: (type: string) => void;
   onGenreClick?: (genre: string) => void;
+  onLikeUpdate?: (findId: string, liked: boolean, likeCount: number) => void;
+  onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean }) => void;
 }
 
-export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: FindCardProps) {
+export default function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCardClick }: FindCardProps) {
+  const { data: session } = useSession();
   const [imageUrl, setImageUrl] = useState<string | null>(find.imageUrl || null);
+  const [liked, setLiked] = useState(find.liked || false);
+  const [likeCount, setLikeCount] = useState(find.likeCount || 0);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     if (find.imageUrl) {
@@ -27,6 +36,13 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: Fi
 
         if (data.thumbnail_url) {
           setImageUrl(data.thumbnail_url);
+          
+          // Save the image URL to the database for future use
+          fetch(`/api/finds/${find.id}/image`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageUrl: data.thumbnail_url }),
+          }).catch(err => console.error("Failed to save image URL:", err));
         }
       } catch (error) {
         console.error("Failed to fetch Spotify image:", error);
@@ -34,7 +50,7 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: Fi
     }
 
     fetchImage();
-  }, [find.spotifyUrl, find.imageUrl]);
+  }, [find.spotifyUrl, find.imageUrl, find.id]);
 
   if (!imageUrl) {
     return (
@@ -52,14 +68,63 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: Fi
     return diffDays <= 3;
   })();
 
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!session || isLiking) return;
+
+    setIsLiking(true);
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 300);
+    
+    try {
+      const response = await fetch(`/api/finds/${find.id}/like`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLiked(data.liked);
+        setLikeCount(data.likeCount);
+        onLikeUpdate?.(find.id, data.liked, data.likeCount);
+      }
+    } catch (error) {
+      console.error("Error liking:", error);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on badges or like button
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.badge-click')) {
+      return;
+    }
+    e.preventDefault();
+    onCardClick?.(find);
+  };
+
   return (
-    <a
-      href={find.spotifyUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block w-full h-full group"
+    <div
+      onClick={handleCardClick}
+      className="block w-full h-full group cursor-pointer"
     >
       <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-colors duration-200 group-hover:bg-muted relative">
+        {/* Like button */}
+        <button
+          onClick={handleLike}
+          disabled={!session || isLiking}
+          className={`absolute bottom-4 right-4 z-10 flex items-center gap-1 transition-all ${
+            !session ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
+          } ${isAnimating ? "animate-bounce" : ""}`}
+        >
+          <Heart
+            className={`h-5 w-5 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-white/70 hover:text-pink-400"} ${isAnimating ? "scale-125" : ""}`}
+          />
+          <span className={`text-sm font-medium transition-colors ${liked ? "text-pink-500" : "text-white/70"}`}>{likeCount}</span>
+        </button>
+
         <TiltedCard
           imageSrc={imageUrl}
           altText={`${find.title} by ${find.artist}`}
@@ -85,9 +150,10 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: Fi
             <span
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 onTypeClick?.(find.type);
               }}
-              className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize cursor-pointer hover:opacity-80 transition-opacity"
+              className="badge-click inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize cursor-pointer hover:opacity-80 transition-opacity"
             >
               {find.type}
             </span>
@@ -95,9 +161,10 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: Fi
               <span
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   onGenreClick?.(find.genre!);
                 }}
-                className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground cursor-pointer hover:opacity-80 transition-opacity"
+                className="badge-click inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground cursor-pointer hover:opacity-80 transition-opacity"
               >
                 {find.genre}
               </span>
@@ -134,7 +201,7 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick }: Fi
           </p>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 

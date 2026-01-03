@@ -5,6 +5,9 @@ import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+
     // Return all finds from all users (public feed)
     const finds = await prisma.spotifyFind.findMany({
       orderBy: { dateAdded: "desc" },
@@ -15,10 +18,26 @@ export async function GET() {
             email: true,
           },
         },
+        _count: {
+          select: { likes: true },
+        },
+        likes: userId ? {
+          where: { userId: userId },
+          select: { id: true },
+        } : false,
       },
     });
 
-    return NextResponse.json(finds);
+    // Transform to include like count and whether current user liked
+    const findsWithLikes = finds.map((find) => ({
+      ...find,
+      likeCount: find._count.likes,
+      liked: userId ? (find.likes as { id: string }[]).length > 0 : false,
+      _count: undefined,
+      likes: undefined,
+    }));
+
+    return NextResponse.json(findsWithLikes);
   } catch (error) {
     console.error("Error fetching finds:", error);
     return NextResponse.json(
@@ -69,4 +88,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

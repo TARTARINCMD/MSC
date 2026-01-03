@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="#0a0a0a"/>
+  <!-- S at top left -->
+  <text x="28" y="40" fill="#ffffff" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle">S</text>
+  <!-- + at top right -->
+  <text x="72" y="40" fill="#ffffff" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle">+</text>
+  <!-- T at bottom right -->
+  <text x="72" y="80" fill="#ffffff" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle">T</text>
+  <!-- + at bottom left -->
+  <text x="28" y="80" fill="#ffffff" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle">+</text>
+</svg>

@@ -30,7 +30,7 @@ export default function TypeFilter({ selectedType, onTypeChange }: TypeFilterPro
   const isSelected = selectedType !== "all";
 
   return (
-    <div className="relative mb-6" ref={dropdownRef}>
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${isSelected
@@ -43,7 +43,7 @@ export default function TypeFilter({ selectedType, onTypeChange }: TypeFilterPro
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-50 min-w-[150px]">
+        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[150px]">
           {types.map((type) => (
             <button
               key={type}

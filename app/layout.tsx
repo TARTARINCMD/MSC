@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "My Spotify Finds",
-  description: "Discoveries and favorites from my music journey",
+  title: "Sharetune: Your Spotify Finds",
+  description: "Discover and share music with friends",
 };
 
 export default function RootLayout({
