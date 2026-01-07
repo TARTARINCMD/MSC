@@ -19,6 +19,11 @@ export default function Sidebar() {
     { name: "News", path: "/news", icon: Newspaper },
   ];
 
+  // Don't render sidebar if user is not logged in
+  if (!session) {
+    return null;
+  }
+
   return (
     <>
       {/* Sidebar */}

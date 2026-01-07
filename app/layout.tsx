@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/components/SessionProvider";
 import Sidebar from "@/components/Sidebar";
+import ContentWrapper from "@/components/ContentWrapper";
 import Footer from "@/components/Footer";
 
 const geistSans = Geist({
@@ -38,9 +39,9 @@ export default function RootLayout({
             enableSystem
           >
             <Sidebar />
-            <div className="pl-24">
+            <ContentWrapper>
               {children}
-            </div>
+            </ContentWrapper>
             <Footer />
           </ThemeProvider>
         </SessionProvider>
