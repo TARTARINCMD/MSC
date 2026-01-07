@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { type FindType } from "@/lib/data";
 import FindList from "@/components/FindList";
-import { ThemeToggle } from "@/components/theme-toggle";
-import CircularText from "@/components/CircularText";
 import TypeFilter from "@/components/TypeFilter";
 import GenreFilter from "@/components/GenreFilter";
 import DateSort from "@/components/DateSort";
@@ -111,48 +109,14 @@ export default function Home() {
 
   // Show welcome page if not logged in
   if (!session) {
-    return (
-      <>
-        <div className="fixed bottom-0 left-0 z-50 p-4 md:p-6">
-          <ThemeToggle />
-        </div>
-        <WelcomePage />
-      </>
-    );
+    return <WelcomePage />;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Left sidebar for logo - hidden on mobile, visible on larger screens */}
-      <aside className="hidden md:fixed md:left-0 md:top-0 md:h-screen md:w-64 md:flex md:items-start md:justify-center md:pt-6 z-40">
-        <div>
-          <CircularText
-            text="SHARE+TUNE+"
-            onHover="goBonkers"
-            spinDuration={30}
-            className="custom-class"
-          />
-        </div>
-      </aside>
-
-      {/* Mobile logo - shown only on small screens */}
-      <div className="md:hidden fixed top-0 left-0 z-50 p-4">
-        <div className="scale-50 origin-top-left">
-          <CircularText
-            text="SHARE+TUNE+"
-            onHover="goBonkers"
-            spinDuration={30}
-            className="custom-class"
-          />
-        </div>
-      </div>
-
       {/* Main content area */}
-      <div className="md:ml-64">
-        <div className="fixed bottom-0 left-0 z-50 p-4 md:p-6">
-          <ThemeToggle />
-        </div>
-        <main className="container mx-auto px-4 py-8 pt-32 md:pt-24">
+      <div>
+        <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-between gap-4 mb-6 p-3 rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-visible relative z-30">
             <div className="flex items-center gap-3 flex-wrap">
               {session && (

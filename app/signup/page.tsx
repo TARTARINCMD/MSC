@@ -4,12 +4,14 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 
 export default function SignupPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -145,16 +147,25 @@ export default function SignupPage() {
                             >
                                 Password
                             </label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={formData.password}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, password: e.target.value })
-                                }
-                                required
-                                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                            />
+                            <div className="relative">
+                                <input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={formData.password}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, password: e.target.value })
+                                    }
+                                    required
+                                    className="w-full px-3 py-2 pr-10 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
                         </div>
 
                         <div>
@@ -164,16 +175,25 @@ export default function SignupPage() {
                             >
                                 Confirm Password
                             </label>
-                            <input
-                                id="confirmPassword"
-                                type="password"
-                                value={formData.confirmPassword}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, confirmPassword: e.target.value })
-                                }
-                                required
-                                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                            />
+                            <div className="relative">
+                                <input
+                                    id="confirmPassword"
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    value={formData.confirmPassword}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, confirmPassword: e.target.value })
+                                    }
+                                    required
+                                    className="w-full px-3 py-2 pr-10 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
                         </div>
 
                         <button

@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/components/SessionProvider";
-import AuthButton from "@/components/AuthButton";
+import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 
 const geistSans = Geist({
@@ -37,10 +37,10 @@ export default function RootLayout({
             defaultTheme="dark"
             enableSystem
           >
-            <div className="fixed top-4 right-4 z-50">
-              <AuthButton />
+            <Sidebar />
+            <div className="pl-24">
+              {children}
             </div>
-            {children}
             <Footer />
           </ThemeProvider>
         </SessionProvider>
