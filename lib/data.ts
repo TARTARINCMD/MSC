@@ -6,7 +6,7 @@ export interface SpotifyFind {
   artist: string;
   type: FindType;
   spotifyUrl: string;
-  spotifyId: string;
+  spotifyId?: string;
   imageUrl?: string;
   description?: string;
   dateAdded: string;

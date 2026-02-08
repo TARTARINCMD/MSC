@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sharetune: Your Spotify Finds",
+  title: "Sharetune: Your Music Finds",
   description: "Discover and share music with friends",
 };
 

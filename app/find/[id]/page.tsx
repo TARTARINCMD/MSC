@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getFindById } from "@/lib/data";
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import SpotifyImage from "@/components/SpotifyImage";
+import { getPlatformFromUrl, getPlatformLabel } from "@/lib/streaming";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ArrowLeft } from "lucide-react";
 
@@ -18,6 +19,7 @@ export default function FindPage({ params }: FindPageProps) {
   if (!find) {
     notFound();
   }
+  const platform = getPlatformFromUrl(find.spotifyUrl);
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,21 +80,25 @@ export default function FindPage({ params }: FindPageProps) {
             </div>
           </div>
 
-          <div className="mb-8 rounded-lg border border-border bg-card">
-            <div className="p-6">
-              <h2 className="mb-4 text-2xl font-semibold text-foreground">Listen on Spotify</h2>
-              <SpotifyPlayer spotifyId={find.spotifyId} type={find.type} />
+          {platform === "spotify" && find.spotifyId && (
+            <div className="mb-8 rounded-lg border border-border bg-card">
+              <div className="p-6">
+                <h2 className="mb-4 text-2xl font-semibold text-foreground">
+                  Listen on {getPlatformLabel(platform)}
+                </h2>
+                <SpotifyPlayer spotifyId={find.spotifyId} type={find.type} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="text-center">
             <a
               href={find.spotifyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-lg bg-[#1DB954] px-6 py-3 text-base font-medium text-white transition-colors hover:bg-[#1ed760]"
+              className="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-base font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Open in Spotify
+              Open in {getPlatformLabel(platform)}
             </a>
           </div>
         </div>

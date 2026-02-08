@@ -29,7 +29,7 @@ model SpotifyFind {
   artist      String
   type        String   // "track" | "album" | "playlist"
   spotifyUrl  String
-  spotifyId   String
+  spotifyId   String?
   imageUrl    String?
   description String?
   genre       String?

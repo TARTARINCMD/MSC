@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
 
 interface SpotifyImageProps {
   spotifyUrl: string;
@@ -34,15 +35,43 @@ export default function SpotifyImage({
 
     async function fetchImage() {
       try {
+        const platform = getPlatformFromUrl(spotifyUrl);
+        if (platform === "youtube" || platform === "youtube_music") {
+          const thumbnail = getYouTubeThumbnailUrl(spotifyUrl);
+          if (thumbnail) {
+            setImageUrl(thumbnail);
+          }
+          setIsLoading(false);
+          return;
+        }
+        if (platform === "apple_music") {
+          const response = await fetch("/api/apple/metadata", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: spotifyUrl }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.imageUrl) {
+              setImageUrl(data.imageUrl);
+            }
+          }
+          setIsLoading(false);
+          return;
+        }
+        if (platform !== "spotify") {
+          setIsLoading(false);
+          return;
+        }
         const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(spotifyUrl)}`;
         const response = await fetch(oembedUrl);
         const data = await response.json();
-        
+
         if (data.thumbnail_url) {
           setImageUrl(data.thumbnail_url);
         }
       } catch (error) {
-        console.error("Failed to fetch Spotify image:", error);
+        console.error("Failed to fetch image:", error);
       } finally {
         setIsLoading(false);
       }

@@ -52,7 +52,7 @@ export default function WelcomePage() {
               <Music className="h-8 w-8 text-primary mb-3 mx-auto" />
               <h3 className="font-semibold text-lg mb-2">Share Your Finds</h3>
               <p className="text-sm text-muted-foreground">
-                Share your favorite tracks, albums, playlists, and podcasts from Spotify
+                Share your favorite tracks, albums, playlists, and podcasts from any platform
               </p>
             </div>
 

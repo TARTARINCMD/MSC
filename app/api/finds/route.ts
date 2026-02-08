@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { extractSpotifyId, getPlatformFromUrl } from "@/lib/streaming";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 
@@ -56,11 +57,27 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { title, artist, type, spotifyUrl, spotifyId, imageUrl, description, genre } = data;
+    const { title, artist, type, spotifyUrl, imageUrl, description, genre } = data;
 
-    if (!title || !artist || !type || !spotifyUrl || !spotifyId) {
+    if (!title || !artist || !type || !spotifyUrl) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const platform = getPlatformFromUrl(spotifyUrl);
+    if (platform === "unknown") {
+      return NextResponse.json(
+        { error: "Unsupported link. Use Spotify, Apple Music, YouTube Music, or YouTube." },
+        { status: 400 }
+      );
+    }
+
+    const spotifyId = platform === "spotify" ? extractSpotifyId(spotifyUrl) : null;
+    if (platform === "spotify" && !spotifyId) {
+      return NextResponse.json(
+        { error: "Invalid link format" },
         { status: 400 }
       );
     }

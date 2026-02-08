@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { spotifyFinds } from "@/lib/data";
+import { GENRES } from "@/lib/genres";
 
 interface GenreFilterProps {
   selectedGenre: string | "all";
@@ -11,13 +11,18 @@ interface GenreFilterProps {
 
 export default function GenreFilter({ selectedGenre, onGenreChange }: GenreFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get all unique genres from the data
-  const genres = Array.from(
-    new Set(spotifyFinds.map((find) => find.genre).filter((genre): genre is string => !!genre))
-  ).sort();
-  const allGenres: (string | "all")[] = ["all", ...genres];
+  const allGenres: (string | "all")[] = useMemo(() => ["all", ...GENRES], []);
+
+  const filteredGenres = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return allGenres;
+    return allGenres.filter(
+      (genre) => genre === "all" || genre.toLowerCase().startsWith(query)
+    );
+  }, [allGenres, search]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -29,6 +34,12 @@ export default function GenreFilter({ selectedGenre, onGenreChange }: GenreFilte
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch("");
+    }
+  }, [isOpen]);
 
   const selectedLabel = selectedGenre === "all" ? "All" : selectedGenre;
   const isSelected = selectedGenre !== "all";
@@ -48,15 +59,24 @@ export default function GenreFilter({ selectedGenre, onGenreChange }: GenreFilte
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[150px] max-h-60 overflow-y-auto">
-          {allGenres.map((genre) => (
+        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[200px] max-h-60 overflow-y-auto">
+          <div className="p-2 border-b border-border">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search genre..."
+              className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          {filteredGenres.map((genre) => (
             <button
               key={genre}
               onClick={() => {
                 onGenreChange(genre);
                 setIsOpen(false);
               }}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors first:rounded-t-md last:rounded-b-md ${
+              className={`w-full text-left px-4 py-2 text-sm transition-colors ${
                 selectedGenre === genre
                   ? "bg-primary text-primary-foreground"
                   : "hover:bg-accent hover:text-accent-foreground"
@@ -70,4 +90,3 @@ export default function GenreFilter({ selectedGenre, onGenreChange }: GenreFilte
     </div>
   );
 }
-

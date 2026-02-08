@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { extractSpotifyId, getPlatformFromUrl, isSupportedStreamingUrl } from "@/lib/streaming";
 
 export default function AddFindPage() {
   const { data: session } = useSession();
@@ -26,69 +27,9 @@ export default function AddFindPage() {
     return null;
   }
 
-  const extractSpotifyId = (url: string): string | null => {
-    const match = url.match(/spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/);
-    return match ? match[2] : null;
-  };
-
-  /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  const fetchMetadata = async (url: string) => {
-    if (!url) return;
-
-    // Check if it's a valid spotify URL before making an API call
-    const match = url.match(/spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/);
-    if (!match) return;
-
-    setIsFetchingMetadata(true);
-    try {
-      const res = await fetch("/api/spotify/metadata", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-
-      if (res.ok) {
-        const metadata = await res.json();
-
-        let type = metadata.type;
-        if (type === 'episode' || type === 'show') {
-          type = 'podcast';
-        }
-
-        setFormData((prev) => ({
-          ...prev,
-          title: metadata.title || prev.title,
-          artist: metadata.artist || prev.artist,
-          type: type as any,
-          spotifyUrl: url,
-          imageUrl: metadata.imageUrl || "",
-        }));
-      }
-    } catch (e) {
-      console.error("Failed to fetch metadata", e);
-    } finally {
-      setIsFetchingMetadata(false);
-    }
-  };
-
-  // Debounce the call or just call on blur? 
-  // Let's call onBlur for simplicity or when the user stops typing for a second.
-  // Actually, since it's a copy-paste action usually, onBlur is simplest, or a simple useEffect with a small timeout.
-
-
-  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
-
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
     setFormData({ ...formData, spotifyUrl: url });
-    // If it looks like a full URL, try to fetch (or we can just do it on blur to avoid spamming)
-    if (url.includes("spotify.com/")) {
-      // Optional: could add debounce here
-    }
-  };
-
-  const handleUrlBlur = () => {
-    fetchMetadata(formData.spotifyUrl);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,9 +37,15 @@ export default function AddFindPage() {
     setError("");
     setLoading(true);
 
-    const spotifyId = extractSpotifyId(formData.spotifyUrl);
-    if (!spotifyId) {
-      setError("Invalid Spotify URL. Please use a valid track, album, or playlist URL.");
+    if (!isSupportedStreamingUrl(formData.spotifyUrl)) {
+      setError("Unsupported link. Use Spotify, Apple Music, YouTube Music, or YouTube.");
+      setLoading(false);
+      return;
+    }
+    const platform = getPlatformFromUrl(formData.spotifyUrl);
+    const spotifyId = platform === "spotify" ? extractSpotifyId(formData.spotifyUrl) : null;
+    if (platform === "spotify" && !spotifyId) {
+      setError("Invalid link format");
       setLoading(false);
       return;
     }
@@ -151,7 +98,7 @@ export default function AddFindPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="spotifyUrl" className="block text-sm font-medium mb-2">
-              Spotify URL *
+              Streaming URL *
             </label>
             <div className="relative">
               <input
@@ -159,19 +106,13 @@ export default function AddFindPage() {
                 type="url"
                 value={formData.spotifyUrl}
                 onChange={handleUrlChange}
-                onBlur={handleUrlBlur}
                 required
-                placeholder="https://open.spotify.com/track/..."
+                placeholder="Spotify, Apple Music, YouTube Music, or YouTube link"
                 className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary pr-10"
               />
-              {isFetchingMetadata && (
-                <div className="absolute right-3 top-2.5">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-                </div>
-              )}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Paste the Spotify URL for a track, album, or playlist
+              Paste a streaming link from Spotify, Apple Music, YouTube Music, or YouTube
             </p>
           </div>
 

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import type { SpotifyFind } from "@/lib/data";
 import TiltedCard from "./TiltedCard";
 import { Heart } from "lucide-react";
+import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
 
 interface FindCardProps {
   find: SpotifyFind & { likeCount?: number; liked?: boolean };
@@ -30,22 +31,56 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLi
 
     async function fetchImage() {
       try {
+        const platform = getPlatformFromUrl(find.spotifyUrl);
+        if (platform === "youtube" || platform === "youtube_music") {
+          const thumbnail = getYouTubeThumbnailUrl(find.spotifyUrl);
+          if (thumbnail) {
+            setImageUrl(thumbnail);
+            fetch(`/api/finds/${find.id}/image`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ imageUrl: thumbnail }),
+            }).catch((err) => console.error("Failed to save image URL:", err));
+          }
+          return;
+        }
+        if (platform === "apple_music") {
+          const response = await fetch("/api/apple/metadata", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: find.spotifyUrl }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.imageUrl) {
+              setImageUrl(data.imageUrl);
+              fetch(`/api/finds/${find.id}/image`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageUrl: data.imageUrl }),
+              }).catch((err) => console.error("Failed to save image URL:", err));
+            }
+          }
+          return;
+        }
+        if (platform !== "spotify") return;
+
         const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(find.spotifyUrl)}`;
         const response = await fetch(oembedUrl);
         const data = await response.json();
 
         if (data.thumbnail_url) {
           setImageUrl(data.thumbnail_url);
-          
+
           // Save the image URL to the database for future use
           fetch(`/api/finds/${find.id}/image`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ imageUrl: data.thumbnail_url }),
-          }).catch(err => console.error("Failed to save image URL:", err));
+          }).catch((err) => console.error("Failed to save image URL:", err));
         }
       } catch (error) {
-        console.error("Failed to fetch Spotify image:", error);
+        console.error("Failed to fetch image:", error);
       }
     }
 

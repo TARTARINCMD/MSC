@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { X, ExternalLink, Trash2, Edit, Heart } from "lucide-react";
+import GenreSelect from "@/components/GenreSelect";
+import { getPlatformFromUrl, getPlatformLabel } from "@/lib/streaming";
 
 interface MusicDetailModalProps {
   isOpen: boolean;
@@ -15,7 +17,7 @@ interface MusicDetailModalProps {
     artist: string;
     type: string;
     spotifyUrl: string;
-    spotifyId: string;
+    spotifyId?: string;
     imageUrl?: string;
     description?: string;
     genre?: string;
@@ -202,13 +204,16 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
                   <option value="playlist">Playlist</option>
                   <option value="podcast">Podcast</option>
                 </select>
-                <input
-                  type="text"
+                <GenreSelect
                   value={genre}
-                  onChange={(e) => setGenre(e.target.value)}
+                  onChange={(value) => setGenre(value)}
                   placeholder="Genre (optional)"
-                  className="px-3 py-1 bg-background border border-border rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary"
+                  inputClassName="px-3 py-1 bg-background border border-border rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary"
+                  dropdownClassName="min-w-[200px]"
                 />
+                <span className="w-full text-xs text-muted-foreground">
+                  If not listed, choose “Other” and note it in the description.
+                </span>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -294,7 +299,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
               className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
             >
               <ExternalLink className="h-4 w-4" />
-              Open in Spotify
+              Open in {getPlatformLabel(getPlatformFromUrl(music.spotifyUrl))}
             </a>
 
             {isOwner && (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { type FindType } from "@/lib/data";
+import { GENRES, normalizeGenre } from "@/lib/genres";
 import FindList from "@/components/FindList";
 import TypeFilter from "@/components/TypeFilter";
 import GenreFilter from "@/components/GenreFilter";
@@ -24,7 +25,7 @@ interface SpotifyFindWithLikes {
   artist: string;
   type: FindType;
   spotifyUrl: string;
-  spotifyId: string;
+  spotifyId?: string;
   imageUrl?: string;
   description?: string;
   dateAdded: string;
@@ -79,7 +80,15 @@ export default function Home() {
 
   const filteredFinds = finds.filter((find) => {
     const typeMatch = selectedType === "all" || find.type === selectedType;
-    const genreMatch = selectedGenre === "all" || find.genre === selectedGenre;
+    const knownGenres = GENRES.filter((genre) => normalizeGenre(genre) !== "other");
+    const isKnownGenre =
+      !!find.genre &&
+      knownGenres.some((genre) => normalizeGenre(genre) === normalizeGenre(find.genre || ""));
+    const genreMatch =
+      selectedGenre === "all" ||
+      (selectedGenre === "Other"
+        ? !isKnownGenre
+        : normalizeGenre(find.genre || "") === normalizeGenre(selectedGenre));
 
     // Filter by view mode
     let viewMatch = true;

@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import GenreSelect from "@/components/GenreSelect";
+import {
+  extractSpotifyId,
+  getPlatformFromUrl,
+  getYouTubeThumbnailUrl,
+  isSupportedStreamingUrl,
+} from "@/lib/streaming";
 
 interface AddMusicModalProps {
   isOpen: boolean;
@@ -24,27 +31,82 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
   const [error, setError] = useState("");
   const [fetchingImage, setFetchingImage] = useState(false);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        title: "",
+        artist: "",
+        type: "track",
+        spotifyUrl: "",
+        description: "",
+        genre: "",
+        imageUrl: "",
+      });
+      setError("");
+      setLoading(false);
+      setFetchingImage(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const extractSpotifyId = (url: string): string | null => {
-    const match = url.match(/spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
-    return match ? match[2] : null;
-  };
-
-  const fetchCoverImage = async (url: string) => {
-    if (!url || !url.includes("spotify.com/")) return;
-
+  const fetchMetadata = async (url: string) => {
+    if (!url) return;
+    const platform = getPlatformFromUrl(url);
     setFetchingImage(true);
     try {
-      const response = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.thumbnail_url) {
-          setFormData(prev => ({ ...prev, imageUrl: data.thumbnail_url }));
+      if (platform === "youtube" || platform === "youtube_music") {
+        const response = await fetch(
+          `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const thumbnail = getYouTubeThumbnailUrl(url);
+          setFormData((prev) => ({
+            ...prev,
+            imageUrl: thumbnail || prev.imageUrl,
+            title: prev.title || data.title || prev.title,
+            artist: prev.artist || data.author_name || prev.artist,
+          }));
         }
+        return;
+      }
+
+      if (platform === "apple_music") {
+        const response = await fetch("/api/apple/metadata", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setFormData((prev) => ({
+            ...prev,
+            imageUrl: data.imageUrl || prev.imageUrl,
+            title: prev.title || data.title || prev.title,
+            artist: prev.artist || data.artist || prev.artist,
+          }));
+        }
+        return;
+      }
+
+      if (platform === "spotify") {
+        const response = await fetch(
+          `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setFormData((prev) => ({
+            ...prev,
+            imageUrl: data.thumbnail_url || prev.imageUrl,
+            title: prev.title || data.title || prev.title,
+            artist: prev.artist || data.author_name || prev.artist,
+          }));
+        }
+        return;
       }
     } catch (err) {
-      console.error("Failed to fetch cover image:", err);
+      console.error("Failed to fetch metadata:", err);
     } finally {
       setFetchingImage(false);
     }
@@ -55,9 +117,16 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
     setError("");
     setLoading(true);
 
-    const spotifyId = extractSpotifyId(formData.spotifyUrl);
-    if (!spotifyId) {
-      setError("Invalid Spotify URL");
+    if (!isSupportedStreamingUrl(formData.spotifyUrl)) {
+      setError("Unsupported link. Use Spotify, Apple Music, YouTube Music, or YouTube.");
+      setLoading(false);
+      return;
+    }
+
+    const platform = getPlatformFromUrl(formData.spotifyUrl);
+    const spotifyId = platform === "spotify" ? extractSpotifyId(formData.spotifyUrl) : null;
+    if (platform === "spotify" && !spotifyId) {
+      setError("Invalid link format");
       setLoading(false);
       return;
     }
@@ -78,7 +147,6 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
       if (!response.ok) {
         const errorData = await response.json();
         setError(errorData.error || "Failed to save");
-        setLoading(false);
         return;
       }
 
@@ -96,6 +164,7 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
       router.refresh();
     } catch (err) {
       setError("Something went wrong");
+    } finally {
       setLoading(false);
     }
   };
@@ -134,20 +203,20 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="spotifyUrl" className="block text-sm font-medium mb-2">
-              Spotify URL *
+              Streaming URL *
             </label>
             <input
               id="spotifyUrl"
               type="url"
               value={formData.spotifyUrl}
               onChange={(e) => setFormData({ ...formData, spotifyUrl: e.target.value })}
-              onBlur={(e) => fetchCoverImage(e.target.value)}
-              placeholder="https://open.spotify.com/track/..."
+              onBlur={(e) => fetchMetadata(e.target.value)}
+              placeholder="Spotify, Apple Music, YouTube Music, or YouTube link"
               required
               className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Paste a Spotify link - cover image will be fetched automatically
+              Paste a streaming link. Title/artist and cover auto-fetch for Spotify, YouTube, and Apple Music.
             </p>
           </div>
 
@@ -221,14 +290,15 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
             <label htmlFor="genre" className="block text-sm font-medium mb-2">
               Genre (Optional)
             </label>
-            <input
-              id="genre"
-              type="text"
+            <GenreSelect
               value={formData.genre}
-              onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
-              placeholder="e.g., Hip Hop, Jazz, Rock"
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              onChange={(value) => setFormData({ ...formData, genre: value })}
+              placeholder="Select a genre"
+              inputClassName="px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
+            <p className="mt-2 text-xs text-muted-foreground">
+              If the genre is not on the list, choose “Other” and add details in the description.
+            </p>
           </div>
 
           <div>

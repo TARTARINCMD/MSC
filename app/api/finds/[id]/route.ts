@@ -77,7 +77,7 @@ export async function PATCH(
       data: {
         description: data.description,
         type: data.type,
-        genre: data.genre,
+        genre: data.genre || null,
       },
     });
 
