@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Music, Users, Newspaper, LogOut } from "lucide-react";
 import CircularText from "./CircularText";
 import { ThemeToggle } from "./theme-toggle";
+import { useSidebar } from "./SidebarContext";
 
 export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, setIsOpen } = useSidebar();
   const { data: session } = useSession();
   const pathname = usePathname();
 
@@ -28,9 +28,12 @@ export default function Sidebar() {
     <>
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-card border-r border-border z-40 transition-all duration-300 ${
+        className={`fixed left-0 top-0 h-screen bg-card border-r border-border z-50 transition-all duration-300 ${
           isOpen ? "w-72" : "w-24"
         }`}
+        style={{
+          boxShadow: isOpen ? '4px 0 24px rgba(0, 0, 0, 0.3)' : 'none'
+        }}
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
       >

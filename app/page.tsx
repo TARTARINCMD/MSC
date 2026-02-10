@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useSidebar } from "@/components/SidebarContext";
 import { type FindType } from "@/lib/data";
 import { GENRES, normalizeGenre } from "@/lib/genres";
 import FindList from "@/components/FindList";
@@ -42,6 +43,7 @@ interface SpotifyFindWithLikes {
 
 export default function Home() {
   const { data: session } = useSession();
+  const { isOpen: sidebarOpen } = useSidebar();
   const [finds, setFinds] = useState<SpotifyFindWithLikes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -129,55 +131,52 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Fixed Toolbar */}
-      <div className={`fixed top-4 z-50 pointer-events-none ${session ? 'left-24' : 'left-0'} right-0`}>
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg pointer-events-auto">
-            <div className="flex items-center gap-3 flex-wrap">
-              {session && (
-                <div className="flex items-center bg-secondary/50 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode("all")}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === "all"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                      }`}
-                  >
-                    Feed
-                  </button>
-                  <button
-                    onClick={() => setViewMode("mine")}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === "mine"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                      }`}
-                  >
-                    My Music
-                  </button>
-                </div>
-              )}
-              <LayoutSelector currentLayout={layout} onLayoutChange={setLayout} />
-              <TypeFilter selectedType={selectedType} onTypeChange={setSelectedType} />
-              <GenreFilter selectedGenre={selectedGenre} onGenreChange={setSelectedGenre} />
-              <DateSort sortOrder={sortOrder} onSortChange={setSortOrder} />
-            </div>
-
-            {session && (
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap flex-shrink-0"
-              >
-                <Plus className="h-4 w-4" />
-                Add Music
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Main content area */}
-      <div>
-        <main className="container mx-auto px-4 pt-20 pb-8">
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'blur-sm' : ''}`}>
+        <main className="container mx-auto px-4 pt-4 pb-8">
+          {/* Sticky Toolbar */}
+          <div className="sticky top-4 z-40 mb-6">
+            <div id="toolbar" className="flex items-center justify-between gap-4 p-3 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg">
+              <div className="flex items-center gap-3 flex-wrap">
+                {session && (
+                  <div className="flex items-center bg-secondary/50 rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode("all")}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === "all"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                      Feed
+                    </button>
+                    <button
+                      onClick={() => setViewMode("mine")}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === "mine"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                      My Music
+                    </button>
+                  </div>
+                )}
+                <LayoutSelector currentLayout={layout} onLayoutChange={setLayout} />
+                <TypeFilter selectedType={selectedType} onTypeChange={setSelectedType} />
+                <GenreFilter selectedGenre={selectedGenre} onGenreChange={setSelectedGenre} />
+                <DateSort sortOrder={sortOrder} onSortChange={setSortOrder} />
+              </div>
+
+              {session && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap flex-shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Music
+                </button>
+              )}
+            </div>
+          </div>
           {loading && (
             <div className="text-center py-12 text-muted-foreground">
               Loading music...

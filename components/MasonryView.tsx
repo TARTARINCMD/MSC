@@ -21,10 +21,10 @@ export default function MasonryView({ finds, onCardClick }: MasonryViewProps) {
     <>
       {/* Top fade gradient overlay */}
       <div 
-        className="pointer-events-none fixed top-0 left-0 right-0 h-40 bg-gradient-to-b from-background via-background/70 to-transparent"
+        className="pointer-events-none fixed top-0 left-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
         style={{ zIndex: 10 }}
       />
-      <div style={{ height: '1000px', position: 'relative', paddingTop: '20px', paddingBottom: '160px' }}>
+      <div style={{ height: '62.5rem', position: 'relative', paddingBottom: '10rem' }}>
         <Masonry
           items={masonryItems}
           ease="power3.out"
@@ -43,7 +43,7 @@ export default function MasonryView({ finds, onCardClick }: MasonryViewProps) {
       </div>
       {/* Bottom fade gradient overlay */}
       <div 
-        className="pointer-events-none fixed bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background/70 to-transparent"
+        className="pointer-events-none fixed bottom-0 left-0 right-0 h-[10rem] bg-gradient-to-t from-background via-background/70 to-transparent"
         style={{ zIndex: 10 }}
       />
     </>

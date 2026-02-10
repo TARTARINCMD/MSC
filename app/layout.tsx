@@ -3,6 +3,7 @@ import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/components/SessionProvider";
+import { SidebarProvider } from "@/components/SidebarContext";
 import Sidebar from "@/components/Sidebar";
 import ContentWrapper from "@/components/ContentWrapper";
 import Footer from "@/components/Footer";
@@ -39,11 +40,13 @@ export default function RootLayout({
             defaultTheme="dark"
             enableSystem
           >
-            <Sidebar />
-            <ContentWrapper>
-              {children}
-            </ContentWrapper>
-            <Footer />
+            <SidebarProvider>
+              <Sidebar />
+              <ContentWrapper>
+                {children}
+              </ContentWrapper>
+              <Footer />
+            </SidebarProvider>
           </ThemeProvider>
         </SessionProvider>
       </body>

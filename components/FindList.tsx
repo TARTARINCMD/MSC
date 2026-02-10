@@ -24,10 +24,10 @@ export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdat
     <>
       {/* Top fade gradient overlay */}
       <div 
-        className="pointer-events-none fixed top-0 left-0 right-0 h-40 bg-gradient-to-b from-background via-background/70 to-transparent"
+        className="pointer-events-none fixed top-0 left-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
         style={{ zIndex: 10 }}
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 pt-4 pb-20">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 pb-[5rem]">
         {finds.map((find, index) => (
           <div
             key={find.id}
@@ -49,7 +49,7 @@ export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdat
       </div>
       {/* Bottom fade gradient overlay */}
       <div 
-        className="pointer-events-none fixed bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background/70 to-transparent"
+        className="pointer-events-none fixed bottom-0 left-0 right-0 h-[10rem] bg-gradient-to-t from-background via-background/70 to-transparent"
         style={{ zIndex: 10 }}
       />
     </>
