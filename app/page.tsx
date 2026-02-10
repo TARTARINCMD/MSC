@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { type FindType } from "@/lib/data";
 import { GENRES, normalizeGenre } from "@/lib/genres";
 import FindList from "@/components/FindList";
+import FindListHorizontal from "@/components/FindListHorizontal";
 import TypeFilter from "@/components/TypeFilter";
 import GenreFilter from "@/components/GenreFilter";
 import DateSort from "@/components/DateSort";
@@ -15,7 +16,7 @@ import LayoutSelector from "@/components/LayoutSelector";
 import MasonryView from "@/components/MasonryView";
 import { Plus } from "lucide-react";
 
-type LayoutType = "grid" | "compact";
+type LayoutType = "grid" | "compact" | "tiles";
 
 type SortOrder = "newest" | "oldest" | "most_liked";
 
@@ -78,6 +79,11 @@ export default function Home() {
     fetchFinds();
   }, [fetchFinds]);
 
+  // Scroll to top when layout changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [layout]);
+
   const filteredFinds = finds.filter((find) => {
     const typeMatch = selectedType === "all" || find.type === selectedType;
     const knownGenres = GENRES.filter((genre) => normalizeGenre(genre) !== "other");
@@ -123,10 +129,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Main content area */}
-      <div>
-        <main className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-between gap-4 mb-6 p-3 rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-visible relative z-30">
+      {/* Fixed Toolbar */}
+      <div className={`fixed top-4 z-50 pointer-events-none ${session ? 'left-24' : 'left-0'} right-0`}>
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between gap-4 p-3 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg pointer-events-auto">
             <div className="flex items-center gap-3 flex-wrap">
               {session && (
                 <div className="flex items-center bg-secondary/50 rounded-lg p-1">
@@ -166,7 +172,12 @@ export default function Home() {
               </button>
             )}
           </div>
+        </div>
+      </div>
 
+      {/* Main content area */}
+      <div>
+        <main className="container mx-auto px-4 pt-20 pb-8">
           {loading && (
             <div className="text-center py-12 text-muted-foreground">
               Loading music...
@@ -199,6 +210,15 @@ export default function Home() {
               {layout === "compact" && (
                 <MasonryView
                   finds={sortedFinds}
+                  onCardClick={(find) => setSelectedMusic(find as SpotifyFindWithLikes)}
+                />
+              )}
+              {layout === "tiles" && (
+                <FindListHorizontal
+                  finds={sortedFinds}
+                  onTypeClick={setSelectedType}
+                  onGenreClick={setSelectedGenre}
+                  onLikeUpdate={handleLikeUpdate}
                   onCardClick={(find) => setSelectedMusic(find as SpotifyFindWithLikes)}
                 />
               )}

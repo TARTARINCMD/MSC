@@ -1,8 +1,8 @@
 "use client";
 
-import { Grid3x3, LayoutGrid } from "lucide-react";
+import { Grid3x3, LayoutGrid, List } from "lucide-react";
 
-type LayoutType = "grid" | "compact";
+type LayoutType = "grid" | "compact" | "tiles";
 
 interface LayoutSelectorProps {
   currentLayout: LayoutType;
@@ -33,6 +33,17 @@ export default function LayoutSelector({ currentLayout, onLayoutChange }: Layout
         title="Compact View"
       >
         <Grid3x3 className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => onLayoutChange("tiles")}
+        className={`p-2 rounded-md transition-all ${
+          currentLayout === "tiles"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+        title="Tiles View"
+      >
+        <List className="h-4 w-4" />
       </button>
     </div>
   );

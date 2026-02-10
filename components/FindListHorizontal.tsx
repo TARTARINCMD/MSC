@@ -1,9 +1,9 @@
 "use client";
 
 import type { SpotifyFind } from "@/lib/data";
-import FindCardWithTilt from "./FindCardWithTilt";
+import FindCardHorizontal from "./FindCardHorizontal";
 
-interface FindListProps {
+interface FindListHorizontalProps {
   finds: (SpotifyFind & { likeCount?: number; liked?: boolean })[];
   onTypeClick?: (type: any) => void;
   onGenreClick?: (genre: string) => void;
@@ -11,7 +11,13 @@ interface FindListProps {
   onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean }) => void;
 }
 
-export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdate, onCardClick }: FindListProps) {
+export default function FindListHorizontal({ 
+  finds, 
+  onTypeClick, 
+  onGenreClick, 
+  onLikeUpdate, 
+  onCardClick 
+}: FindListHorizontalProps) {
   if (finds.length === 0) {
     return (
       <div className="py-12 text-center animate-in fade-in duration-300">
@@ -27,7 +33,7 @@ export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdat
         className="pointer-events-none fixed top-0 left-0 right-0 h-40 bg-gradient-to-b from-background via-background/70 to-transparent"
         style={{ zIndex: 10 }}
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 pt-4 pb-20">
+      <div className="flex flex-col gap-8 md:gap-10 pt-4 pb-20">
         {finds.map((find, index) => (
           <div
             key={find.id}
@@ -37,7 +43,7 @@ export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdat
               animationFillMode: "both",
             }}
           >
-            <FindCardWithTilt
+            <FindCardHorizontal
               find={find}
               onTypeClick={onTypeClick}
               onGenreClick={onGenreClick}
@@ -55,4 +61,3 @@ export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdat
     </>
   );
 }
-
