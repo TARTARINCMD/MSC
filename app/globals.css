@@ -117,10 +117,12 @@
     @apply border-border outline-ring/50;
   }
   html {
+    font-family: var(--font-geist-sans), sans-serif;
     transition: background-color 500ms ease, color 500ms ease;
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans), sans-serif;
     transition: background-color 500ms ease, color 500ms ease;
   }
   * {
