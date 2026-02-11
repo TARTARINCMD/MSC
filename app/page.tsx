@@ -131,6 +131,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Top fade gradient overlay - outside blurred container, only in cards area */}
+      <div 
+        className="pointer-events-none fixed top-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
+        style={{ 
+          zIndex: 35, // Below toolbar (z-40) but above blurred content
+          left: session ? '6rem' : '0' // left-24 = 6rem when session exists
+        }}
+      />
+      
       {/* Main content area */}
       <div className={`transition-all duration-300 ${sidebarOpen ? 'blur-sm' : ''}`}>
         <main className="container mx-auto px-4 pt-4 pb-8">

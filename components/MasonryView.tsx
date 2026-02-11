@@ -18,35 +18,23 @@ export default function MasonryView({ finds, onCardClick }: MasonryViewProps) {
   }));
 
   return (
-    <>
-      {/* Top fade gradient overlay */}
-      <div 
-        className="pointer-events-none fixed top-0 left-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
-        style={{ zIndex: 10 }}
+    <div style={{ height: '62.5rem', position: 'relative' }}>
+      <Masonry
+        items={masonryItems}
+        ease="power3.out"
+        duration={0.6}
+        stagger={0.05}
+        animateFrom="bottom"
+        scaleOnHover={true}
+        hoverScale={0.95}
+        blurToFocus={true}
+        colorShiftOnHover={false}
+        onItemClick={(item) => {
+          const find = finds.find(f => f.id === item.id);
+          if (find) onCardClick(find);
+        }}
       />
-      <div style={{ height: '62.5rem', position: 'relative', paddingBottom: '10rem' }}>
-        <Masonry
-          items={masonryItems}
-          ease="power3.out"
-          duration={0.6}
-          stagger={0.05}
-          animateFrom="bottom"
-          scaleOnHover={true}
-          hoverScale={0.95}
-          blurToFocus={true}
-          colorShiftOnHover={false}
-          onItemClick={(item) => {
-            const find = finds.find(f => f.id === item.id);
-            if (find) onCardClick(find);
-          }}
-        />
-      </div>
-      {/* Bottom fade gradient overlay */}
-      <div 
-        className="pointer-events-none fixed bottom-0 left-0 right-0 h-[10rem] bg-gradient-to-t from-background via-background/70 to-transparent"
-        style={{ zIndex: 10 }}
-      />
-    </>
+    </div>
   );
 }
 

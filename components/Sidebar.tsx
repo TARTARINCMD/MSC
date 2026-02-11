@@ -77,39 +77,40 @@ export default function Sidebar() {
             </div>
           </nav>
 
-          {/* Bottom Section - Theme & Logout */}
+          {/* Bottom Section - Theme, User Info & Logout */}
           {session && (
-            <div className="border-t border-border p-3 space-y-2">
-              {/* User info */}
-              {isOpen && (
-                <div className="px-3 py-2 text-sm">
-                  <p className="font-medium truncate">{session.user?.name || "User"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
-                </div>
-              )}
-
-              {/* Theme Toggle */}
-              <div className={`flex items-center gap-3 px-3 py-2 ${isOpen ? "justify-start" : "justify-center"}`}>
-                <div className="flex items-center justify-center">
-                  <ThemeToggle />
-                </div>
-                {isOpen && <span className="text-sm">Theme</span>}
+            <>
+              {/* Theme Toggle - Above divider */}
+              <div className="flex items-center justify-center py-3">
+                <ThemeToggle />
               </div>
 
-              {/* Logout */}
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all ${
-                  isOpen ? "justify-start" : "justify-center"
-                }`}
-                title={!isOpen ? "Logout" : undefined}
-              >
-                <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span className={`transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
-                  Logout
-                </span>
-              </button>
-            </div>
+              {/* Divider */}
+              <div className="border-t border-border"></div>
+
+              {/* User info and Logout - Below divider */}
+              <div className="p-3 space-y-2">
+                {/* User info */}
+                {isOpen && (
+                  <div className="px-3 py-2 text-sm">
+                    <p className="font-medium truncate">{session.user?.name || "User"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
+                  </div>
+                )}
+
+                {/* Logout */}
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="w-full flex items-center justify-center gap-3 px-3 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+                  title={!isOpen ? "Logout" : undefined}
+                >
+                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  <span className={`transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                    Logout
+                  </span>
+                </button>
+              </div>
+            </>
           )}
         </div>
       </aside>

@@ -21,38 +21,26 @@ export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdat
   }
 
   return (
-    <>
-      {/* Top fade gradient overlay */}
-      <div 
-        className="pointer-events-none fixed top-0 left-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
-        style={{ zIndex: 10 }}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 pb-[5rem]">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
         {finds.map((find, index) => (
-          <div
-            key={find.id}
-            className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500"
-            style={{
-              animationDelay: `${index * 50}ms`,
-              animationFillMode: "both",
-            }}
-          >
-            <FindCardWithTilt
-              find={find}
-              onTypeClick={onTypeClick}
-              onGenreClick={onGenreClick}
-              onLikeUpdate={onLikeUpdate}
-              onCardClick={onCardClick}
-            />
-          </div>
+        <div
+          key={find.id}
+          className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500"
+          style={{
+            animationDelay: `${index * 50}ms`,
+            animationFillMode: "both",
+          }}
+        >
+          <FindCardWithTilt
+            find={find}
+            onTypeClick={onTypeClick}
+            onGenreClick={onGenreClick}
+            onLikeUpdate={onLikeUpdate}
+            onCardClick={onCardClick}
+          />
+        </div>
         ))}
-      </div>
-      {/* Bottom fade gradient overlay */}
-      <div 
-        className="pointer-events-none fixed bottom-0 left-0 right-0 h-[10rem] bg-gradient-to-t from-background via-background/70 to-transparent"
-        style={{ zIndex: 10 }}
-      />
-    </>
+    </div>
   );
 }
 
