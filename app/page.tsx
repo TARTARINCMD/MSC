@@ -47,8 +47,7 @@ export default function Home() {
   const [finds, setFinds] = useState<SpotifyFindWithLikes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-  const [viewMode, setViewMode] = useState<"all" | "mine">("all");
+  const [viewMode, setViewMode] = useState<"all" | "following" | "mine">("all");
   const [selectedType, setSelectedType] = useState<FindType | "all">("all");
   const [selectedGenre, setSelectedGenre] = useState<string | "all">("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
@@ -63,19 +62,19 @@ export default function Home() {
     }
 
     try {
-      const response = await fetch("/api/finds");
+      const response = await fetch(`/api/finds?scope=${viewMode}`);
       if (response.ok) {
         const data = await response.json();
         setFinds(data);
       } else {
         setError("Failed to load music");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to load music");
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, viewMode]);
 
   useEffect(() => {
     fetchFinds();
@@ -98,13 +97,7 @@ export default function Home() {
         ? !isKnownGenre
         : normalizeGenre(find.genre || "") === normalizeGenre(selectedGenre));
 
-    // Filter by view mode
-    let viewMatch = true;
-    if (viewMode === "mine" && session?.user) {
-      viewMatch = find.userId === (session.user as any).id;
-    }
-
-    return typeMatch && genreMatch && viewMatch;
+    return typeMatch && genreMatch;
   });
 
   const sortedFinds = [...filteredFinds].sort((a, b) => {
@@ -166,6 +159,15 @@ export default function Home() {
                         }`}
                     >
                       My Music
+                    </button>
+                    <button
+                      onClick={() => setViewMode("following")}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === "following"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                      Following
                     </button>
                   </div>
                 )}

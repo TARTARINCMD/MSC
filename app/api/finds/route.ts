@@ -4,13 +4,42 @@ import { extractSpotifyId, getPlatformFromUrl } from "@/lib/streaming";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
+    const { searchParams } = new URL(request.url);
+    const scope = searchParams.get("scope") || "all";
+    const whereClause: { userId?: string | { in: string[] } } = {};
+
+    if (scope === "mine") {
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      whereClause.userId = userId;
+    }
+
+    if (scope === "following") {
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const following = await prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true },
+      });
+      const followingIds = following.map((entry) => entry.followingId);
+
+      if (followingIds.length === 0) {
+        return NextResponse.json([]);
+      }
+
+      whereClause.userId = { in: followingIds };
+    }
 
     // Return all finds from all users (public feed)
     const finds = await prisma.spotifyFind.findMany({
+      where: whereClause,
       orderBy: { dateAdded: "desc" },
       include: {
         user: {

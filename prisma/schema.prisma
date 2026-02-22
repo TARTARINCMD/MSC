@@ -21,6 +21,8 @@ model User {
   
   finds     SpotifyFind[]
   likes     Like[]
+  followers Follow[] @relation("UserFollowers")
+  following Follow[] @relation("UserFollowing")
 }
 
 model SpotifyFind {
@@ -54,4 +56,18 @@ model Like {
   
   @@unique([userId, findId])
   @@index([findId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower    User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
