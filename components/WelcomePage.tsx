@@ -10,29 +10,17 @@ export default function WelcomePage() {
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
       
-      {/* Floating logo */}
-      <div className="absolute top-8 left-8 hidden md:block">
-        <CircularText
-          text="SHARE+TUNE+"
-          onHover="goBonkers"
-          spinDuration={30}
-          className="custom-class"
-        />
-      </div>
-
       {/* Main content */}
       <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Logo for mobile */}
-          <div className="md:hidden mb-8 flex justify-center">
-            <div className="scale-75">
-              <CircularText
-                text="SHARE+TUNE+"
-                onHover="goBonkers"
-                spinDuration={30}
-                className="custom-class"
-              />
-            </div>
+          {/* Logo - centered at top */}
+          <div className="mb-8 flex justify-center">
+            <CircularText
+              text="SHARE+TUNE+"
+              onHover="goBonkers"
+              spinDuration={30}
+              className="custom-class"
+            />
           </div>
 
           {/* Hero text */}
@@ -42,12 +30,10 @@ export default function WelcomePage() {
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
             Discover, share, and celebrate music with friends.
-            <br />
-            Your personal music feed awaits.
           </p>
 
           {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
             <div className="p-6 rounded-xl bg-card border border-border">
               <Music className="h-8 w-8 text-primary mb-3 mx-auto" />
               <h3 className="font-semibold text-lg mb-2">Share Your Finds</h3>
@@ -65,7 +51,7 @@ export default function WelcomePage() {
             </div>
 
             <div className="p-6 rounded-xl bg-card border border-border">
-              <Users className="h-8 w-8 text-accent mb-3 mx-auto" />
+              <Users className="h-8 w-8 text-foreground mb-3 mx-auto" />
               <h3 className="font-semibold text-lg mb-2">Follow Friends</h3>
               <p className="text-sm text-muted-foreground">
                 See what your friends are sharing in your personalized feed
@@ -96,10 +82,6 @@ export default function WelcomePage() {
               Login
             </Link>
           </div>
-
-          <p className="mt-8 text-sm text-muted-foreground">
-            Join the community and start sharing your music today
-          </p>
         </div>
       </div>
     </div>

@@ -155,9 +155,9 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLi
           } ${isAnimating ? "animate-bounce" : ""}`}
         >
           <Heart
-            className={`h-5 w-5 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-white/70 hover:text-pink-400"} ${isAnimating ? "scale-125" : ""}`}
+            className={`h-5 w-5 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-muted-foreground hover:text-pink-400"} ${isAnimating ? "scale-125" : ""}`}
           />
-          <span className={`text-sm font-medium transition-colors ${liked ? "text-pink-500" : "text-white/70"}`}>{likeCount}</span>
+          <span className={`text-sm font-medium transition-colors ${liked ? "text-pink-500" : "text-muted-foreground"}`}>{likeCount}</span>
         </button>
 
         <TiltedCard
