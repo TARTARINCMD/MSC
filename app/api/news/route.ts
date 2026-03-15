@@ -128,7 +128,7 @@ export async function GET() {
     const artistPromises = artists.map((artist) =>
       fetchNewsForQuery(artist, {
         artist,
-        genre: artistGenreMap.get(artist) ?? null,
+        genre: artistGenreMap.get(artist) ?? undefined,
         artistImageUrl: artistImageMap.get(artist) ?? null,
       })
     );
