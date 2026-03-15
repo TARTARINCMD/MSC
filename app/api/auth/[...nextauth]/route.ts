@@ -1,7 +1,12 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import SpotifyProvider from "next-auth/providers/spotify";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
+import { randomBytes } from "crypto";
+
+const spotifyClientId = process.env.SPOTIFY_CLIENT_ID;
+const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -40,6 +45,16 @@ export const authOptions: NextAuthOptions = {
                 };
             },
         }),
+        ...(spotifyClientId && spotifyClientSecret
+            ? [
+                  SpotifyProvider({
+                      clientId: spotifyClientId,
+                      clientSecret: spotifyClientSecret,
+                      authorization:
+                          "https://accounts.spotify.com/authorize?scope=user-read-email",
+                  }),
+              ]
+            : []),
     ],
     session: {
         strategy: "jwt",
@@ -48,10 +63,37 @@ export const authOptions: NextAuthOptions = {
         signIn: "/login",
     },
     callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
+        async jwt({ token, user, account }) {
+            if (user && account?.provider === "credentials") {
                 token.id = user.id;
             }
+
+            if (token.email && (!token.id || account?.provider === "spotify")) {
+                let dbUser = await prisma.user.findUnique({
+                    where: { email: token.email },
+                });
+
+                if (!dbUser) {
+                    const generatedPassword = randomBytes(32).toString("hex");
+                    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+
+                    dbUser = await prisma.user.create({
+                        data: {
+                            email: token.email,
+                            name: token.name ?? null,
+                            password: hashedPassword,
+                        },
+                    });
+                } else if (!dbUser.name && token.name) {
+                    dbUser = await prisma.user.update({
+                        where: { id: dbUser.id },
+                        data: { name: token.name },
+                    });
+                }
+
+                token.id = dbUser.id;
+            }
+
             return token;
         },
         async session({ session, token }) {

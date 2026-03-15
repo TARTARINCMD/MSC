@@ -28,8 +28,10 @@ You have two options:
 
 Add to your `.env` file:
 ```
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://127.0.0.1:3000"
 NEXTAUTH_SECRET="your-secret-key-here"
+SPOTIFY_CLIENT_ID="your-spotify-client-id"
+SPOTIFY_CLIENT_SECRET="your-spotify-client-secret"
 ```
 
 Generate a secret:
@@ -57,6 +59,18 @@ npx prisma generate
 
 ```bash
 npm run dev
+```
+
+## Spotify App Callback URL
+
+In your Spotify Developer dashboard app settings, add this redirect URI:
+```
+http://127.0.0.1:3000/api/auth/callback/spotify
+```
+
+If you deploy the app, also add your production callback URL:
+```
+https://your-domain.com/api/auth/callback/spotify
 ```
 
 ## What's Been Set Up
