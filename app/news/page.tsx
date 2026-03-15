@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
-import { ExternalLink, Newspaper } from "lucide-react";
+import { Newspaper, Bookmark } from "lucide-react";
 import SearchableDropdown from "@/components/SearchableDropdown";
+import { useSidebar } from "@/components/SidebarContext";
 
 interface NewsArticle {
   title: string;
@@ -13,62 +14,108 @@ interface NewsArticle {
   artist: string;
   artistImageUrl: string | null;
   genre: string | null;
+  keyword: string;
 }
 
-function NewsCard({ article }: { article: NewsArticle }) {
-  return (
-    <a
-      href={article.link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block rounded-xl border border-border bg-card overflow-hidden hover:shadow-lg transition-all hover:scale-[1.02]"
-    >
-      <div className="relative aspect-[16/9] bg-muted overflow-hidden">
-        {article.artistImageUrl ? (
-          <img
-            src={article.artistImageUrl}
-            alt=""
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 brightness-[0.7]"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-accent/20">
-            <Newspaper className="h-10 w-10 text-muted-foreground/30" />
-          </div>
-        )}
-        
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ExternalLink className="h-4 w-4 text-white drop-shadow-md" />
-        </div>
-      </div>
+interface SavedArticleItem {
+  id: string;
+  title: string;
+  link: string;
+  keyword: string;
+  pubDate: string | null;
+  savedAt: string;
+}
 
-      <div className="p-4">
-        <h2 className="text-sm font-semibold text-card-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+function NewsCard({
+  article,
+  isSaved,
+  onSave,
+  onUnsave,
+}: {
+  article: NewsArticle;
+  isSaved: boolean;
+  onSave: () => void;
+  onUnsave: () => void;
+}) {
+  return (
+    <div className="group flex items-center justify-between gap-4 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
+      <a
+        href={article.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="min-w-0 flex-1"
+      >
+        <h2 className="text-sm sm:text-base font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
           {article.title}
+          {article.keyword && (
+            <span className="text-muted-foreground font-normal"> · {article.keyword}</span>
+          )}
         </h2>
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{formatDate(article.pubDate)}</span>
-          <span className="inline-block rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-            {article.artist}
-          </span>
-        </div>
-      </div>
-    </a>
+      </a>
+      <span className="text-muted-foreground text-xs sm:text-sm flex-shrink-0">{formatDate(article.pubDate)}</span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          if (isSaved) onUnsave();
+          else onSave();
+        }}
+        className="flex-shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors"
+        aria-label={isSaved ? "Remove from saved" : "Save for later"}
+      >
+        {isSaved ? <Bookmark className="h-5 w-5 fill-pink-400 text-pink-400" /> : <Bookmark className="h-5 w-5" />}
+      </button>
+    </div>
+  );
+}
+
+function SavedCard({
+  article,
+  onUnsave,
+}: {
+  article: SavedArticleItem;
+  onUnsave: () => void;
+}) {
+  return (
+    <div className="group flex items-center justify-between gap-4 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
+      <a
+        href={article.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="min-w-0 flex-1"
+      >
+        <h2 className="text-sm sm:text-base font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
+          {article.title}
+          {article.keyword && (
+            <span className="text-muted-foreground font-normal"> · {article.keyword}</span>
+          )}
+        </h2>
+      </a>
+      <span className="text-muted-foreground text-xs sm:text-sm flex-shrink-0">{formatDate(article.pubDate ?? "")}</span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          onUnsave();
+        }}
+        className="flex-shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-muted/50 transition-colors"
+        aria-label="Remove from saved"
+      >
+        <Bookmark className="h-5 w-5 fill-pink-400 text-pink-400" />
+      </button>
+    </div>
   );
 }
 
 export default function NewsPage() {
   const { data: session } = useSession();
+  const { isOpen: sidebarOpen } = useSidebar();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [savedArticles, setSavedArticles] = useState<SavedArticleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedArtist, setSelectedArtist] = useState<string>("all");
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
-
-  const artists = useMemo(() => {
-    const set = new Set(articles.map((a) => a.artist));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [articles]);
+  const [activeTab, setActiveTab] = useState<"news" | "saved">("news");
 
   const genres = useMemo(() => {
     const set = new Set(articles.map((a) => a.genre).filter(Boolean) as string[]);
@@ -77,11 +124,59 @@ export default function NewsPage() {
 
   const filteredArticles = useMemo(() => {
     return articles.filter((a) => {
-      if (selectedArtist !== "all" && a.artist !== selectedArtist) return false;
       if (selectedGenre !== "all" && a.genre !== selectedGenre) return false;
       return true;
     });
-  }, [articles, selectedArtist, selectedGenre]);
+  }, [articles, selectedGenre]);
+
+  const savedLinks = useMemo(() => new Set(savedArticles.map((s) => s.link)), [savedArticles]);
+
+  const fetchSaved = useCallback(async () => {
+    try {
+      const res = await fetch("/api/news/saved");
+      if (res.ok) {
+        const data = await res.json();
+        setSavedArticles(data);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const saveArticle = useCallback(
+    async (article: NewsArticle) => {
+      try {
+        const res = await fetch("/api/news/saved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: article.title,
+            link: article.link,
+            keyword: article.keyword,
+            pubDate: article.pubDate,
+          }),
+        });
+        if (res.ok) await fetchSaved();
+      } catch {
+        // ignore
+      }
+    },
+    [fetchSaved]
+  );
+
+  const unsaveArticle = useCallback(
+    async (link: string) => {
+      try {
+        const res = await fetch(`/api/news/saved?link=${encodeURIComponent(link)}`, { method: "DELETE" });
+        if (res.ok) {
+          setSavedArticles((prev) => prev.filter((s) => s.link !== link));
+        }
+      } catch {
+        // ignore
+      }
+    },
+    []
+  );
 
   const fetchNews = useCallback(async () => {
     if (!session) {
@@ -109,6 +204,10 @@ export default function NewsPage() {
     fetchNews();
   }, [fetchNews]);
 
+  useEffect(() => {
+    if (session) fetchSaved();
+  }, [session, fetchSaved]);
+
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -119,59 +218,78 @@ export default function NewsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">News</h1>
-          <p className="text-muted-foreground">
-            Latest news about artists on Sharetune
-          </p>
+      <div className={`transition-all duration-300 ${sidebarOpen ? "blur-sm" : ""}`}>
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8 text-left">
+            <h1 className="text-4xl font-bold mb-2">News</h1>
+            <p className="text-muted-foreground">
+              Latest news about artists on Sharetune
+            </p>
+          </div>
+
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="flex items-center bg-secondary/50 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab("news")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                activeTab === "news"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Feed
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("saved")}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                activeTab === "saved"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Saved{savedArticles.length > 0 ? ` (${savedArticles.length})` : ""}
+            </button>
+          </div>
+          {!loading && !error && articles.length > 0 && activeTab === "news" && (
+            <>
+              {genres.length > 0 && (
+                <SearchableDropdown
+                  value={selectedGenre}
+                  onChange={setSelectedGenre}
+                  options={genres}
+                  allLabel="All Genres"
+                  placeholder="All Genres"
+                  searchPlaceholder="Search genres..."
+                />
+              )}
+              {selectedGenre !== "all" && (
+                <button
+                  onClick={() => setSelectedGenre("all")}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+            </>
+          )}
         </div>
 
-        {!loading && !error && articles.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <SearchableDropdown
-              value={selectedArtist}
-              onChange={setSelectedArtist}
-              options={artists}
-              allLabel="All Artists"
-              placeholder="All Artists"
-              searchPlaceholder="Search artists..."
-            />
-
-            {genres.length > 0 && (
-              <SearchableDropdown
-                value={selectedGenre}
-                onChange={setSelectedGenre}
-                options={genres}
-                allLabel="All Genres"
-                placeholder="All Genres"
-                searchPlaceholder="Search genres..."
-              />
-            )}
-
-            {(selectedArtist !== "all" || selectedGenre !== "all") && (
-              <button
-                onClick={() => { setSelectedArtist("all"); setSelectedGenre("all"); }}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        )}
-
         {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className="space-y-5">
+            {Array.from({ length: 10 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-xl border border-border bg-card overflow-hidden animate-pulse"
+                className="flex items-center justify-between gap-4 rounded-lg px-2 py-2 animate-pulse"
               >
-                <div className="aspect-[16/9] bg-muted" />
-                <div className="p-4">
-                  <div className="h-4 bg-muted rounded w-full mb-2" />
-                  <div className="h-4 bg-muted rounded w-2/3 mb-3" />
-                  <div className="h-3 bg-muted rounded w-1/3" />
+                <div className="flex-1 min-w-0">
+                  <div className="h-3 bg-muted rounded w-5/6 mb-1" />
+                  <div className="h-3 bg-muted rounded w-2/3" />
+                </div>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <div className="h-3 bg-muted rounded w-16" />
+                  <div className="h-3 bg-muted rounded w-20" />
                 </div>
               </div>
             ))}
@@ -192,19 +310,50 @@ export default function NewsPage() {
           </div>
         )}
 
-        {!loading && !error && articles.length > 0 && filteredArticles.length === 0 && (
+        {activeTab === "news" && !loading && !error && articles.length > 0 && filteredArticles.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             No articles match the selected filters.
           </div>
         )}
 
-        {!loading && !error && filteredArticles.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+        {activeTab === "news" && !loading && !error && filteredArticles.length > 0 && (
+          <div className="space-y-5">
             {filteredArticles.map((article, i) => (
-              <NewsCard key={`${article.link}-${i}`} article={article} />
+              <NewsCard
+                key={`${article.link}-${i}`}
+                article={article}
+                isSaved={savedLinks.has(article.link)}
+                onSave={() => saveArticle(article)}
+                onUnsave={() => unsaveArticle(article.link)}
+              />
             ))}
           </div>
         )}
+
+        {activeTab === "saved" && (
+          <>
+            {savedArticles.length === 0 && (
+              <div className="text-center py-16">
+                <Bookmark className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+                <p className="text-muted-foreground">
+                  No saved articles yet. Save articles from the News tab to build your collection.
+                </p>
+              </div>
+            )}
+            {savedArticles.length > 0 && (
+              <div className="space-y-5">
+                {savedArticles.map((article) => (
+                  <SavedCard
+                    key={article.id}
+                    article={article}
+                    onUnsave={() => unsaveArticle(article.link)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        </div>
       </div>
     </div>
   );

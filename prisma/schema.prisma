@@ -19,10 +19,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  finds     SpotifyFind[]
-  likes     Like[]
-  followers Follow[] @relation("UserFollowers")
-  following Follow[] @relation("UserFollowing")
+  finds         SpotifyFind[]
+  likes         Like[]
+  followers     Follow[] @relation("UserFollowers")
+  following     Follow[] @relation("UserFollowing")
+  savedArticles SavedArticle[]
 }
 
 model SpotifyFind {
@@ -70,4 +71,19 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model SavedArticle {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  link      String
+  keyword   String
+  pubDate   String?
+  savedAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, link])
+  @@index([userId])
 }

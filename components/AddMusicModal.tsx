@@ -117,6 +117,12 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
     setError("");
     setLoading(true);
 
+    if (!formData.genre) {
+      setError("Please select a genre");
+      setLoading(false);
+      return;
+    }
+
     if (!isSupportedStreamingUrl(formData.spotifyUrl)) {
       setError("Unsupported link. Use Spotify, Apple Music, YouTube Music, or YouTube.");
       setLoading(false);
@@ -288,7 +294,7 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
 
           <div>
             <label htmlFor="genre" className="block text-sm font-medium mb-2">
-              Genre (Optional)
+              Genre *
             </label>
             <GenreSelect
               value={formData.genre}

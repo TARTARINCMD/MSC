@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useSidebar } from "@/components/SidebarContext";
 
 interface Person {
   id: string;
@@ -22,6 +23,7 @@ interface UserFind {
 
 export default function PeoplePage() {
   const { data: session } = useSession();
+  const { isOpen: sidebarOpen } = useSidebar();
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [selectedPersonFinds, setSelectedPersonFinds] = useState<UserFind[]>([]);
@@ -133,8 +135,9 @@ export default function PeoplePage() {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-6">People</h1>
+      <div className={`transition-all duration-300 ${sidebarOpen ? "blur-sm" : ""}`}>
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-4xl font-bold mb-6">People</h1>
         <p className="text-muted-foreground mb-8">
           Discover music lovers and see what they are sharing
         </p>
@@ -255,6 +258,7 @@ export default function PeoplePage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

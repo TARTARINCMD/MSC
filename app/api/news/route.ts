@@ -9,6 +9,13 @@ const MAX_TOTAL_ARTICLES = 50;
 const FETCH_TIMEOUT_MS = 5000;
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+const FOLLOWING_TOPICS = [
+  "spotify",
+  "apple music",
+  "billboard charts",
+  "music tours",
+];
+
 let cachedArticles: NewsArticle[] | null = null;
 let cacheTimestamp = 0;
 
@@ -20,10 +27,14 @@ interface NewsArticle {
   artist: string;
   artistImageUrl: string | null;
   genre: string | null;
+  keyword: string;
 }
 
-async function fetchNewsForArtist(artist: string): Promise<Omit<NewsArticle, "artistImageUrl" | "genre">[]> {
-  const query = encodeURIComponent(`${artist} music`);
+async function fetchNewsForQuery(
+  queryTerm: string,
+  opts: { artist?: string; genre?: string; artistImageUrl?: string | null }
+): Promise<Omit<NewsArticle, "artistImageUrl">[]> {
+  const query = encodeURIComponent(`${queryTerm} music`);
   const url = `https://news.google.com/rss/search?q=${query}&hl=en&gl=US&ceid=US:en`;
 
   const controller = new AbortController();
@@ -51,7 +62,9 @@ async function fetchNewsForArtist(artist: string): Promise<Omit<NewsArticle, "ar
       link: item.link || "",
       source: extractSource(item.source || item.title || ""),
       pubDate: item.pubDate || "",
-      artist,
+      artist: opts.artist ?? "",
+      genre: opts.genre ?? null,
+      keyword: queryTerm,
     }));
   } catch {
     return [];
@@ -92,9 +105,11 @@ export async function GET() {
       orderBy: { dateAdded: "desc" },
     });
 
-    if (artistRecords.length === 0) {
-      return NextResponse.json([]);
-    }
+    const genreRecords = await prisma.spotifyFind.findMany({
+      distinct: ["genre"],
+      where: { genre: { not: null } },
+      select: { genre: true },
+    });
 
     const artistImageMap = new Map<string, string | null>();
     const artistGenreMap = new Map<string, string | null>();
@@ -106,10 +121,29 @@ export async function GET() {
     }
 
     const artists = Array.from(artistImageMap.keys());
-
-    const results = await Promise.allSettled(
-      artists.map((artist) => fetchNewsForArtist(artist))
+    const genres = Array.from(
+      new Set(genreRecords.map((r) => r.genre).filter(Boolean) as string[])
     );
+
+    const artistPromises = artists.map((artist) =>
+      fetchNewsForQuery(artist, {
+        artist,
+        genre: artistGenreMap.get(artist) ?? null,
+        artistImageUrl: artistImageMap.get(artist) ?? null,
+      })
+    );
+    const genrePromises = genres.map((genre) =>
+      fetchNewsForQuery(genre, { genre })
+    );
+    const topicPromises = FOLLOWING_TOPICS.map((topic) =>
+      fetchNewsForQuery(topic, {})
+    );
+
+    const results = await Promise.allSettled([
+      ...artistPromises,
+      ...genrePromises,
+      ...topicPromises,
+    ]);
 
     const allArticles: NewsArticle[] = [];
     const seenLinks = new Set<string>();
@@ -121,8 +155,9 @@ export async function GET() {
         seenLinks.add(article.link);
         allArticles.push({
           ...article,
-          artistImageUrl: artistImageMap.get(article.artist) ?? null,
-          genre: artistGenreMap.get(article.artist) ?? null,
+          artistImageUrl: article.artist
+            ? artistImageMap.get(article.artist) ?? null
+            : null,
         });
       }
     }

@@ -82,9 +82,9 @@ export default function FindCard({ find, onLikeUpdate }: FindCardProps) {
             } ${isAnimating ? "animate-bounce" : ""}`}
           >
             <Heart
-              className={`h-5 w-5 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-foreground/80 hover:text-pink-400"} ${isAnimating ? "scale-125" : ""}`}
+              className={`h-6 w-6 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-white hover:text-pink-400"} ${isAnimating ? "scale-125" : ""}`}
             />
-            <span className={`text-sm font-medium transition-colors ${liked ? "text-pink-500" : "text-foreground/80"}`}>{likeCount}</span>
+            <span className={`text-base font-semibold transition-colors ${liked ? "text-pink-500" : "text-white"}`}>{likeCount}</span>
           </button>
         </div>
 
