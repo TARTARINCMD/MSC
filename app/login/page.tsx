@@ -9,6 +9,7 @@ import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [spotifyLoading, setSpotifyLoading] = useState(false);
     const [error, setError] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
@@ -34,11 +35,17 @@ export default function LoginPage() {
                 router.push("/");
                 router.refresh();
             }
-        } catch (error) {
+        } catch {
             setError("Something went wrong");
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSpotifyLogin = async () => {
+        setError("");
+        setSpotifyLoading(true);
+        await signIn("spotify", { callbackUrl: "/" });
     };
 
     return (
@@ -118,8 +125,25 @@ export default function LoginPage() {
                         </button>
                     </form>
 
+                    <div className="my-4 flex items-center">
+                        <div className="h-px flex-1 bg-border" />
+                        <span className="px-3 text-xs text-muted-foreground uppercase">
+                            or
+                        </span>
+                        <div className="h-px flex-1 bg-border" />
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleSpotifyLogin}
+                        disabled={spotifyLoading}
+                        className="w-full bg-[#1DB954] text-white py-2 rounded-md font-medium hover:bg-[#1AA34A] transition-colors disabled:opacity-50"
+                    >
+                        {spotifyLoading ? "Redirecting to Spotify..." : "Continue with Spotify"}
+                    </button>
+
                     <p className="mt-6 text-center text-sm text-muted-foreground">
-                        Don't have an account?{" "}
+                        Don&apos;t have an account?{" "}
                         <Link href="/signup" className="text-primary hover:underline">
                             Sign up
                         </Link>
