@@ -5,9 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { XMLParser } from "fast-xml-parser";
 
 const MAX_ARTICLES_PER_ARTIST = 5;
-const MAX_TOTAL_ARTICLES = 50;
 const FETCH_TIMEOUT_MS = 5000;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const FETCH_INTERVAL_MS = 15 * 60 * 1000; // Fetch new articles every 15 minutes
 
 const FOLLOWING_TOPICS = [
   "spotify",
@@ -16,8 +15,7 @@ const FOLLOWING_TOPICS = [
   "music tours",
 ];
 
-let cachedArticles: NewsArticle[] | null = null;
-let cacheTimestamp = 0;
+let lastFetchTimestamp = 0;
 
 interface NewsArticle {
   title: string;
@@ -95,9 +93,58 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (cachedArticles && Date.now() - cacheTimestamp < CACHE_TTL_MS) {
-      return NextResponse.json(cachedArticles);
+    // Check if database is empty (first time)
+    const articleCount = await prisma.newsArticle.count();
+    
+    if (articleCount === 0) {
+      // First time - fetch and wait
+      console.log("First time fetch - populating database...");
+      await fetchAndStoreNewArticles();
+      lastFetchTimestamp = Date.now();
+    } else {
+      const shouldFetchNew = Date.now() - lastFetchTimestamp > FETCH_INTERVAL_MS;
+
+      if (shouldFetchNew) {
+        // Fetch new articles in background
+        fetchAndStoreNewArticles().catch((err) =>
+          console.error("Error fetching new articles:", err)
+        );
+        lastFetchTimestamp = Date.now();
+      }
     }
+
+    // Always return from database, sorted by publication date (newest first)
+    const storedArticles = await prisma.newsArticle.findMany({
+      orderBy: { pubDate: "desc" },
+    });
+
+    const articles = storedArticles.map((a) => ({
+      title: a.title,
+      link: a.link,
+      source: a.source,
+      pubDate: a.pubDate,
+      artist: a.artist,
+      artistImageUrl: a.artistImageUrl,
+      genre: a.genre,
+      keyword: a.keyword,
+    }));
+
+    return NextResponse.json(articles, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
+  }
+}
+
+async function fetchAndStoreNewArticles() {
+  try {
 
     const artistRecords = await prisma.spotifyFind.findMany({
       distinct: ["artist"],
@@ -166,16 +213,36 @@ export async function GET() {
       (a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
     );
 
-    const result = allArticles.slice(0, MAX_TOTAL_ARTICLES);
-    cachedArticles = result;
-    cacheTimestamp = Date.now();
+    // Store new articles in database (only if they don't exist)
+    let newCount = 0;
+    for (const article of allArticles) {
+      try {
+        await prisma.newsArticle.upsert({
+          where: { link: article.link },
+          create: {
+            title: article.title,
+            link: article.link,
+            source: article.source,
+            pubDate: article.pubDate,
+            artist: article.artist,
+            artistImageUrl: article.artistImageUrl,
+            genre: article.genre,
+            keyword: article.keyword,
+          },
+          update: {
+            // Don't update existing articles, just keep them as is
+          },
+        });
+        newCount++;
+      } catch (err) {
+        // Skip duplicates or errors
+        console.error("Error storing article:", err);
+      }
+    }
 
-    return NextResponse.json(result);
+    console.log(`Processed ${allArticles.length} articles, added ${newCount} new ones`);
   } catch (error) {
-    console.error("Error fetching news:", error);
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
-    );
+    console.error("Error in fetchAndStoreNewArticles:", error);
+    throw error;
   }
 }

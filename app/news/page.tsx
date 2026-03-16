@@ -26,16 +26,58 @@ interface SavedArticleItem {
   savedAt: string;
 }
 
+type HighlightTerm = { value: string | null | undefined; className: string };
+
+function renderHighlightedTitle(title: string, terms: HighlightTerm[]) {
+  const normalizedMap = new Map<
+    string,
+    { original: string; className: string }
+  >();
+
+  for (const term of terms) {
+    if (!term.value || !term.value.trim()) continue;
+    const key = term.value.toLowerCase();
+    if (!normalizedMap.has(key)) {
+      normalizedMap.set(key, { original: term.value, className: term.className });
+    }
+  }
+
+  if (normalizedMap.size === 0) return title;
+
+  const escapeRegex = (value: string) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const pattern = Array.from(normalizedMap.keys())
+    .map(escapeRegex)
+    .join("|");
+  const regex = new RegExp(`(${pattern})`, "gi");
+
+  const parts = title.split(regex);
+
+  return parts.map((part, index) => {
+    const key = part.toLowerCase();
+    const match = normalizedMap.get(key);
+    if (!match) return <span key={index}>{part}</span>;
+    return (
+      <span key={index} className={match.className}>
+        {part}
+      </span>
+    );
+  });
+}
+
 function NewsCard({
   article,
   isSaved,
   onSave,
   onUnsave,
+  highlightTerms,
 }: {
   article: NewsArticle;
   isSaved: boolean;
   onSave: () => void;
   onUnsave: () => void;
+  highlightTerms: HighlightTerm[];
 }) {
   return (
     <div className="group flex items-center justify-between gap-4 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
@@ -46,7 +88,7 @@ function NewsCard({
         className="min-w-0 flex-1"
       >
         <h2 className="text-sm sm:text-base font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
-          {article.title}
+          {renderHighlightedTitle(article.title, highlightTerms)}
           {article.keyword && (
             <span className="text-muted-foreground font-normal"> · {article.keyword}</span>
           )}
@@ -72,9 +114,11 @@ function NewsCard({
 function SavedCard({
   article,
   onUnsave,
+  highlightTerms,
 }: {
   article: SavedArticleItem;
   onUnsave: () => void;
+  highlightTerms: HighlightTerm[];
 }) {
   return (
     <div className="group flex items-center justify-between gap-4 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
@@ -85,7 +129,7 @@ function SavedCard({
         className="min-w-0 flex-1"
       >
         <h2 className="text-sm sm:text-base font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
-          {article.title}
+          {renderHighlightedTitle(article.title, highlightTerms)}
           {article.keyword && (
             <span className="text-muted-foreground font-normal"> · {article.keyword}</span>
           )}
@@ -122,10 +166,34 @@ export default function NewsPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [articles]);
 
+  const artists = useMemo(() => {
+    const set = new Set(articles.map((a) => a.artist).filter(Boolean) as string[]);
+    return Array.from(set);
+  }, [articles]);
+
+  const keywords = useMemo(() => {
+    const set = new Set(articles.map((a) => a.keyword).filter(Boolean) as string[]);
+    return Array.from(set);
+  }, [articles]);
+
+  const allHighlightTerms = useMemo(() => {
+    const terms: HighlightTerm[] = [];
+    keywords.forEach((keyword) => terms.push({ value: keyword, className: "underline decoration-1 underline-offset-2" }));
+    genres.forEach((genre) => terms.push({ value: genre, className: "underline decoration-1 underline-offset-2" }));
+    artists.forEach((artist) => terms.push({ value: artist, className: "underline decoration-1 underline-offset-2" }));
+    return terms;
+  }, [artists, genres, keywords]);
+
   const filteredArticles = useMemo(() => {
-    return articles.filter((a) => {
+    const filtered = articles.filter((a) => {
       if (selectedGenre !== "all" && a.genre !== selectedGenre) return false;
       return true;
+    });
+
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.pubDate).getTime();
+      const dateB = new Date(b.pubDate).getTime();
+      return dateB - dateA; // Newest first
     });
   }, [articles, selectedGenre]);
 
@@ -325,6 +393,7 @@ export default function NewsPage() {
                 isSaved={savedLinks.has(article.link)}
                 onSave={() => saveArticle(article)}
                 onUnsave={() => unsaveArticle(article.link)}
+                highlightTerms={allHighlightTerms}
               />
             ))}
           </div>
@@ -347,6 +416,7 @@ export default function NewsPage() {
                     key={article.id}
                     article={article}
                     onUnsave={() => unsaveArticle(article.link)}
+                    highlightTerms={allHighlightTerms}
                   />
                 ))}
               </div>

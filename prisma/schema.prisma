@@ -87,3 +87,19 @@ model SavedArticle {
   @@unique([userId, link])
   @@index([userId])
 }
+
+model NewsArticle {
+  id              String   @id @default(cuid())
+  title           String
+  link            String   @unique
+  source          String
+  pubDate         String
+  artist          String
+  artistImageUrl  String?
+  genre           String?
+  keyword         String
+  fetchedAt       DateTime @default(now())
+
+  @@index([fetchedAt])
+  @@index([link])
+}
