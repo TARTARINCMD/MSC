@@ -113,9 +113,12 @@ export async function GET() {
       }
     }
 
-    // Always return from database, sorted by publication date (newest first)
+    // Always return from database, newest fetches first.
+    // We sort by fetchedAt (DateTime) instead of pubDate (string) because pubDate is RFC822
+    // and string sorting can put old articles above new ones.
     const storedArticles = await prisma.newsArticle.findMany({
-      orderBy: { pubDate: "desc" },
+      orderBy: { fetchedAt: "desc" },
+      take: 150,
     });
 
     const articles = storedArticles.map((a) => ({
@@ -213,34 +216,25 @@ async function fetchAndStoreNewArticles() {
       (a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
     );
 
-    // Store new articles in database (only if they don't exist)
-    let newCount = 0;
-    for (const article of allArticles) {
-      try {
-        await prisma.newsArticle.upsert({
-          where: { link: article.link },
-          create: {
-            title: article.title,
-            link: article.link,
-            source: article.source,
-            pubDate: article.pubDate,
-            artist: article.artist,
-            artistImageUrl: article.artistImageUrl,
-            genre: article.genre,
-            keyword: article.keyword,
-          },
-          update: {
-            // Don't update existing articles, just keep them as is
-          },
-        });
-        newCount++;
-      } catch (err) {
-        // Skip duplicates or errors
-        console.error("Error storing article:", err);
-      }
-    }
+    // Store new articles in database (dedupe by unique `link`)
+    const result = await prisma.newsArticle.createMany({
+      data: allArticles.map((article) => ({
+        title: article.title,
+        link: article.link,
+        source: article.source,
+        pubDate: article.pubDate,
+        artist: article.artist,
+        artistImageUrl: article.artistImageUrl,
+        genre: article.genre,
+        keyword: article.keyword,
+        fetchedAt: new Date(),
+      })),
+      skipDuplicates: true,
+    });
 
-    console.log(`Processed ${allArticles.length} articles, added ${newCount} new ones`);
+    console.log(
+      `Processed ${allArticles.length} articles, added ${result.count} new ones`
+    );
   } catch (error) {
     console.error("Error in fetchAndStoreNewArticles:", error);
     throw error;
