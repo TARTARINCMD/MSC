@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import SpotifyImage from "./SpotifyImage";
 import { Heart } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface FindCardProps {
   find: SpotifyFind & {
@@ -15,7 +16,7 @@ interface FindCardProps {
 }
 
 export default function FindCard({ find, onLikeUpdate }: FindCardProps) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [liked, setLiked] = useState(find.liked || false);
   const [likeCount, setLikeCount] = useState(find.likeCount || 0);
   const [isLiking, setIsLiking] = useState(false);
@@ -33,14 +34,14 @@ export default function FindCard({ find, onLikeUpdate }: FindCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!session || isLiking) return;
+    if (!user || isLiking) return;
 
     setIsLiking(true);
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 300);
     
     try {
-      const response = await fetch(`/api/finds/${find.id}/like`, {
+      const response = await apiFetch(`/api/finds/${find.id}/like`, {
         method: "POST",
       });
 
@@ -76,9 +77,9 @@ export default function FindCard({ find, onLikeUpdate }: FindCardProps) {
           {/* Like button overlay */}
           <button
             onClick={handleLike}
-            disabled={!session || isLiking}
+            disabled={!user || isLiking}
             className={`absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-sm bg-background/60 transition-all ${
-              !session ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
+              !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
             } ${isAnimating ? "animate-bounce" : ""}`}
           >
             <Heart

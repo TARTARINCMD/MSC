@@ -10,6 +10,7 @@ import {
   getYouTubeThumbnailUrl,
   isSupportedStreamingUrl,
 } from "@/lib/streaming";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface AddMusicModalProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
     }
 
     try {
-      const response = await fetch("/api/finds", {
+      const response = await apiFetch("/api/finds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SessionProvider } from "@/components/SessionProvider";
+import { SupabaseAuthProvider } from "@/components/SupabaseAuthProvider";
 import { SidebarProvider } from "@/components/SidebarContext";
 import Sidebar from "@/components/Sidebar";
 import ContentWrapper from "@/components/ContentWrapper";
@@ -34,7 +34,7 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionProvider>
+        <SupabaseAuthProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
@@ -48,7 +48,7 @@ export default function RootLayout({
               <Footer />
             </SidebarProvider>
           </ThemeProvider>
-        </SessionProvider>
+        </SupabaseAuthProvider>
       </body>
     </html>
   );

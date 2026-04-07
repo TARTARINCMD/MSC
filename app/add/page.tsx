@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { extractSpotifyId, getPlatformFromUrl, isSupportedStreamingUrl } from "@/lib/streaming";
+import { apiFetch } from "@/lib/api-fetch";
 
 export default function AddFindPage() {
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -22,9 +23,18 @@ export default function AddFindPage() {
     genre: "",
   });
 
-  if (!session) {
-    router.push("/login");
-    return null;
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        {authLoading ? "Loading…" : null}
+      </div>
+    );
   }
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +61,7 @@ export default function AddFindPage() {
     }
 
     try {
-      const response = await fetch("/api/finds", {
+      const response = await apiFetch("/api/finds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

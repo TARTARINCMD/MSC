@@ -8,7 +8,9 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
+  // Migrations must use a direct Postgres connection (not the pooler on 6543).
+  // Runtime uses DATABASE_URL in lib/prisma.ts (pooled, with adapter).
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import { Heart } from "lucide-react";
 import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
+import { apiFetch } from "@/lib/api-fetch";
 import Image from "next/image";
 
 interface FindCardHorizontalProps {
@@ -22,7 +23,7 @@ export default function FindCardHorizontal({
   onLikeUpdate, 
   onCardClick 
 }: FindCardHorizontalProps) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [imageUrl, setImageUrl] = useState<string | null>(find.imageUrl || null);
   const [liked, setLiked] = useState(find.liked || false);
   const [likeCount, setLikeCount] = useState(find.likeCount || 0);
@@ -103,14 +104,14 @@ export default function FindCardHorizontal({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!session || isLiking) return;
+    if (!user || isLiking) return;
 
     setIsLiking(true);
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 300);
     
     try {
-      const response = await fetch(`/api/finds/${find.id}/like`, {
+      const response = await apiFetch(`/api/finds/${find.id}/like`, {
         method: "POST",
       });
 
@@ -198,9 +199,9 @@ export default function FindCardHorizontal({
             </div>
             <button
               onClick={handleLike}
-              disabled={!session || isLiking}
+              disabled={!user || isLiking}
               className={`shrink-0 flex items-center gap-1 transition-all ${
-                !session ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
+                !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
               } ${isAnimating ? "animate-bounce" : ""}`}
             >
               <Heart

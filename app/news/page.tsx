@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import { Newspaper, Bookmark } from "lucide-react";
 import SearchableDropdown from "@/components/SearchableDropdown";
 import { useSidebar } from "@/components/SidebarContext";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface NewsArticle {
   title: string;
@@ -152,7 +153,7 @@ function SavedCard({
 }
 
 export default function NewsPage() {
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const { isOpen: sidebarOpen } = useSidebar();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [savedArticles, setSavedArticles] = useState<SavedArticleItem[]>([]);
@@ -201,7 +202,7 @@ export default function NewsPage() {
 
   const fetchSaved = useCallback(async () => {
     try {
-      const res = await fetch("/api/news/saved");
+      const res = await apiFetch("/api/news/saved");
       if (res.ok) {
         const data = await res.json();
         setSavedArticles(data);
@@ -214,7 +215,7 @@ export default function NewsPage() {
   const saveArticle = useCallback(
     async (article: NewsArticle) => {
       try {
-        const res = await fetch("/api/news/saved", {
+        const res = await apiFetch("/api/news/saved", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -235,7 +236,7 @@ export default function NewsPage() {
   const unsaveArticle = useCallback(
     async (link: string) => {
       try {
-        const res = await fetch(`/api/news/saved?link=${encodeURIComponent(link)}`, { method: "DELETE" });
+        const res = await apiFetch(`/api/news/saved?link=${encodeURIComponent(link)}`, { method: "DELETE" });
         if (res.ok) {
           setSavedArticles((prev) => prev.filter((s) => s.link !== link));
         }
@@ -247,14 +248,14 @@ export default function NewsPage() {
   );
 
   const fetchNews = useCallback(async () => {
-    if (!session) {
+    if (!user) {
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
       setError("");
-      const response = await fetch("/api/news");
+      const response = await apiFetch("/api/news");
       if (!response.ok) {
         setError("Failed to load news");
         return;
@@ -266,17 +267,25 @@ export default function NewsPage() {
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [user]);
 
   useEffect(() => {
     fetchNews();
   }, [fetchNews]);
 
   useEffect(() => {
-    if (session) fetchSaved();
-  }, [session, fetchSaved]);
+    if (user) fetchSaved();
+  }, [user, fetchSaved]);
 
-  if (!session) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Please log in to view news.</p>

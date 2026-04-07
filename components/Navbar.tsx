@@ -1,15 +1,16 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Music, Users, Newspaper, LogOut } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import CircularText from "./CircularText";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { user, loading, signOut } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { name: "Music", path: "/", icon: Music },
@@ -17,13 +18,17 @@ export default function Navbar() {
     { name: "News", path: "/news", icon: Newspaper },
   ];
 
+  const displayName =
+    user &&
+    (typeof user.user_metadata?.name === "string"
+      ? user.user_metadata.name
+      : null);
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-24">
-          {/* Left - Logo and Nav Items */}
           <div className="flex items-center gap-4">
-            {/* Spinning Logo */}
             <div className="flex-shrink-0">
               <div className="scale-[0.45] origin-center">
                 <CircularText
@@ -34,7 +39,6 @@ export default function Navbar() {
                 />
               </div>
             </div>
-            {/* Nav Items */}
             <div className="flex items-center gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -57,28 +61,27 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Right - User Actions */}
           <div className="flex items-center gap-3">
-            {session ? (
+            {!loading && user ? (
               <div className="flex items-center gap-3">
-                {/* User name */}
                 <span className="text-sm font-medium">
-                  {session.user?.name || "User"}
+                  {displayName || "User"}
                 </span>
-                
-                {/* Theme toggle */}
                 <ThemeToggle />
-                
-                {/* Logout button */}
                 <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  type="button"
+                  onClick={async () => {
+                    await signOut();
+                    router.push("/");
+                    router.refresh();
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-accent rounded-md text-sm font-medium transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
-            ) : (
+            ) : !loading ? (
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <Link
@@ -94,11 +97,10 @@ export default function Navbar() {
                   Sign Up
                 </Link>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
     </nav>
   );
 }
-

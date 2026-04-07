@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getAuthUser } from "@/lib/auth-server";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getAuthUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -29,7 +28,7 @@ export async function POST(
     const existingLike = await prisma.like.findUnique({
       where: {
         userId_findId: {
-          userId: session.user.id,
+          userId: user.id,
           findId: findId,
         },
       },
@@ -50,7 +49,7 @@ export async function POST(
       // Like - create new like
       await prisma.like.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           findId: findId,
         },
       });
@@ -75,7 +74,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const authUser = await getAuthUser();
     const { id: findId } = await params;
 
     const likeCount = await prisma.like.count({
@@ -83,11 +82,11 @@ export async function GET(
     });
 
     let liked = false;
-    if (session?.user?.id) {
+    if (authUser?.id) {
       const existingLike = await prisma.like.findUnique({
         where: {
           userId_findId: {
-            userId: session.user.id,
+            userId: authUser.id,
             findId: findId,
           },
         },

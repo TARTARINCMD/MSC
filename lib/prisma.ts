@@ -12,15 +12,11 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-console.log("DB URL Check:", {
-  exists: !!connectionString,
-  prefix: connectionString?.substring(0, 20) + "..."
-});
-
 const pool = new Pool({
   connectionString,
-  ssl: true,
-  max: 10 // connection pool size
+  // Supabase (and most hosted Postgres) require SSL
+  ssl: { rejectUnauthorized: false },
+  max: 10,
 });
 const adapter = new PrismaPg(pool);
 

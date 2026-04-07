@@ -1,15 +1,14 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import { useSidebar } from "./SidebarContext";
 
 export default function ContentWrapper({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
-  
+  const { user, loading } = useAuth();
+
   return (
-    <div className={session ? "pl-24" : ""}>
+    <div className={!loading && user ? "pl-24" : ""}>
       {children}
     </div>
   );
 }
-

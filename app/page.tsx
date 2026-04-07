@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import { useSidebar } from "@/components/SidebarContext";
 import { type FindType } from "@/lib/data";
 import { GENRES, normalizeGenre } from "@/lib/genres";
@@ -16,6 +16,7 @@ import MusicDetailModal from "@/components/MusicDetailModal";
 import LayoutSelector from "@/components/LayoutSelector";
 import MasonryView from "@/components/MasonryView";
 import { Plus } from "lucide-react";
+import { apiFetch } from "@/lib/api-fetch";
 
 type LayoutType = "grid" | "compact" | "tiles";
 
@@ -42,7 +43,7 @@ interface SpotifyFindWithLikes {
 }
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const { isOpen: sidebarOpen } = useSidebar();
   const [finds, setFinds] = useState<SpotifyFindWithLikes[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,13 +57,13 @@ export default function Home() {
   const [layout, setLayout] = useState<LayoutType>("grid");
 
   const fetchFinds = useCallback(async () => {
-    if (!session) {
+    if (!user) {
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`/api/finds?scope=${viewMode}`);
+      const response = await apiFetch(`/api/finds?scope=${viewMode}`);
       if (response.ok) {
         const data = await response.json();
         setFinds(data);
@@ -74,7 +75,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [session, viewMode]);
+  }, [user, viewMode]);
 
   useEffect(() => {
     fetchFinds();
@@ -117,8 +118,15 @@ export default function Home() {
     );
   };
 
-  // Show welcome page if not logged in
-  if (!session) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!user) {
     return <WelcomePage />;
   }
 
@@ -129,7 +137,7 @@ export default function Home() {
         className="pointer-events-none fixed top-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
         style={{ 
           zIndex: 35, // Below toolbar (z-40) but above blurred content
-          left: session ? '6rem' : '0' // left-24 = 6rem when session exists
+          left: user ? '6rem' : '0'
         }}
       />
       
@@ -140,7 +148,7 @@ export default function Home() {
           <div className="sticky top-4 z-40 mb-6">
             <div id="toolbar" className="flex items-center justify-between gap-4 p-3 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg">
               <div className="flex items-center gap-3 flex-wrap">
-                {session && (
+                {user && (
                   <div className="flex items-center bg-secondary/50 rounded-lg p-1">
                     <button
                       onClick={() => setViewMode("all")}
@@ -177,7 +185,7 @@ export default function Home() {
                 <DateSort sortOrder={sortOrder} onSortChange={setSortOrder} />
               </div>
 
-              {session && (
+              {user && (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap flex-shrink-0"
@@ -202,7 +210,7 @@ export default function Home() {
 
           {!loading && !error && sortedFinds.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              No music found. {session && "Be the first to add some!"}
+              No music found. {user && "Be the first to add some!"}
             </div>
           )}
 

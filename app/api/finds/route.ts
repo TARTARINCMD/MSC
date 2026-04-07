@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractSpotifyId, getPlatformFromUrl } from "@/lib/streaming";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { getAuthUser } from "@/lib/auth-server";
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const authUser = await getAuthUser();
+    const userId = authUser?.id;
     const { searchParams } = new URL(request.url);
     const scope = searchParams.get("scope") || "all";
     const whereClause: { userId?: string | { in: string[] } } = {};
@@ -79,9 +78,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getAuthUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -121,7 +120,7 @@ export async function POST(request: Request) {
         imageUrl: imageUrl || null,
         description: description || null,
         genre: genre || null,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 

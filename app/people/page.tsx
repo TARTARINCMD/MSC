@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import Link from "next/link";
 import { useSidebar } from "@/components/SidebarContext";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface Person {
   id: string;
@@ -22,7 +23,7 @@ interface UserFind {
 }
 
 export default function PeoplePage() {
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const { isOpen: sidebarOpen } = useSidebar();
   const [people, setPeople] = useState<Person[]>([]);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
@@ -34,7 +35,7 @@ export default function PeoplePage() {
 
   useEffect(() => {
     const fetchPeople = async () => {
-      if (!session) {
+      if (!user) {
         setLoading(false);
         return;
       }
@@ -42,7 +43,7 @@ export default function PeoplePage() {
       try {
         setLoading(true);
         setError("");
-        const response = await fetch("/api/users");
+        const response = await apiFetch("/api/users");
         if (!response.ok) {
           setError("Failed to load people");
           return;
@@ -57,13 +58,13 @@ export default function PeoplePage() {
     };
 
     fetchPeople();
-  }, [session]);
+  }, [user]);
 
   const openPersonPosts = async (person: Person) => {
     try {
       setSelectedPerson(person);
       setFindsLoading(true);
-      const response = await fetch(`/api/users/${person.id}/finds`);
+      const response = await apiFetch(`/api/users/${person.id}/finds`);
       if (!response.ok) {
         setError("Failed to load this user's posts");
         setSelectedPersonFinds([]);
@@ -82,7 +83,7 @@ export default function PeoplePage() {
   const toggleFollow = async (userId: string) => {
     try {
       setUpdatingUserId(userId);
-      const response = await fetch(`/api/users/${userId}/follow`, {
+      const response = await apiFetch(`/api/users/${userId}/follow`, {
         method: "POST",
       });
 
@@ -114,7 +115,15 @@ export default function PeoplePage() {
     }
   };
 
-  if (!session) {
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

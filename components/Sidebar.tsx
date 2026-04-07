@@ -1,6 +1,7 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Music, Users, Newspaper, LogOut } from "lucide-react";
@@ -10,7 +11,8 @@ import { useSidebar } from "./SidebarContext";
 
 export default function Sidebar() {
   const { isOpen, setIsOpen } = useSidebar();
-  const { data: session } = useSession();
+  const { user, loading, signOut } = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
 
   const navItems = [
@@ -19,8 +21,7 @@ export default function Sidebar() {
     { name: "News", path: "/news", icon: Newspaper },
   ];
 
-  // Don't render sidebar if user is not logged in
-  if (!session) {
+  if (loading || !user) {
     return null;
   }
 
@@ -78,7 +79,7 @@ export default function Sidebar() {
           </nav>
 
           {/* Bottom Section - Theme, User Info & Logout */}
-          {session && (
+          {user && (
             <>
               {/* Theme Toggle - Above divider */}
               <div className="flex items-center justify-center py-3">
@@ -93,14 +94,23 @@ export default function Sidebar() {
                 {/* User info */}
                 {isOpen && (
                   <div className="px-3 py-2 text-sm">
-                    <p className="font-medium truncate">{session.user?.name || "User"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{session.user?.email}</p>
+                    <p className="font-medium truncate">
+                      {(typeof user.user_metadata?.name === "string"
+                        ? user.user_metadata.name
+                        : null) || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                 )}
 
                 {/* Logout */}
                 <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
+                  type="button"
+                  onClick={async () => {
+                    await signOut();
+                    router.push("/");
+                    router.refresh();
+                  }}
                   className="w-full flex items-center justify-center gap-3 px-3 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                   title={!isOpen ? "Logout" : undefined}
                 >

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/SupabaseAuthProvider";
 import { useRouter } from "next/navigation";
 import { X, ExternalLink, Trash2, Edit, Heart } from "lucide-react";
 import GenreSelect from "@/components/GenreSelect";
 import { getPlatformFromUrl, getPlatformLabel } from "@/lib/streaming";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface MusicDetailModalProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ interface MusicDetailModalProps {
 }
 
 export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onLikeUpdate }: MusicDetailModalProps) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -59,14 +60,14 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
 
   if (!isOpen || !music) return null;
 
-  const isOwner = session?.user && (session.user as any).id === music.userId;
+  const isOwner = !!user && user.id === music.userId;
 
   const handleLike = async () => {
-    if (!session || isLiking) return;
+    if (!user || isLiking) return;
 
     setIsLiking(true);
     try {
-      const response = await fetch(`/api/finds/${music.id}/like`, {
+      const response = await apiFetch(`/api/finds/${music.id}/like`, {
         method: "POST",
       });
 
@@ -86,7 +87,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
   const handleDelete = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/finds/${music.id}`, {
+      const response = await apiFetch(`/api/finds/${music.id}`, {
         method: "DELETE",
       });
 
@@ -109,7 +110,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
     setError("");
 
     try {
-      const response = await fetch(`/api/finds/${music.id}`, {
+      const response = await apiFetch(`/api/finds/${music.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -265,7 +266,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
             </div>
             
             {/* Like button */}
-            {session && (
+            {user && (
               <button
                 onClick={handleLike}
                 disabled={isLiking}
@@ -273,7 +274,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
                   liked
                     ? "bg-pink-500/20 text-pink-500 hover:bg-pink-500/30"
                     : "bg-secondary hover:bg-accent"
-                } ${!session ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                } ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <Heart
                   className={`h-5 w-5 transition-all ${liked ? "fill-pink-500" : ""} ${isLiking ? "animate-pulse" : ""}`}
