@@ -110,6 +110,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Ensure the user row exists (may be missing for users who logged in before profile sync was set up)
+    await prisma.user.upsert({
+      where: { id: user.id },
+      create: {
+        id: user.id,
+        email: user.email!,
+        name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : null,
+      },
+      update: {},
+    });
+
     const find = await prisma.spotifyFind.create({
       data: {
         title,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import TiltedCard from "./TiltedCard";
@@ -16,7 +16,7 @@ interface FindCardProps {
   onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean }) => void;
 }
 
-export default function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCardClick }: FindCardProps) {
+function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCardClick }: FindCardProps) {
   const { user } = useAuth();
   const [imageUrl, setImageUrl] = useState<string | null>(find.imageUrl || null);
   const [liked, setLiked] = useState(find.liked || false);
@@ -241,3 +241,4 @@ export default function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLi
   );
 }
 
+export default memo(FindCardWithTilt);

@@ -110,13 +110,18 @@ export default function Home() {
     return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
   });
 
-  const handleLikeUpdate = (findId: string, liked: boolean, likeCount: number) => {
+  const handleLikeUpdate = useCallback((findId: string, liked: boolean, likeCount: number) => {
     setFinds((prevFinds) =>
       prevFinds.map((find) =>
         find.id === findId ? { ...find, liked, likeCount } : find
       )
     );
-  };
+  }, []);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleCardClick = useCallback((find: any) => {
+    setSelectedMusic(find as SpotifyFindWithLikes);
+  }, []);
 
   if (authLoading) {
     return (
@@ -222,13 +227,13 @@ export default function Home() {
                   onTypeClick={setSelectedType}
                   onGenreClick={setSelectedGenre}
                   onLikeUpdate={handleLikeUpdate}
-                  onCardClick={(find) => setSelectedMusic(find as SpotifyFindWithLikes)}
+                  onCardClick={handleCardClick}
                 />
               )}
               {layout === "compact" && (
                 <MasonryView
                   finds={sortedFinds}
-                  onCardClick={(find) => setSelectedMusic(find as SpotifyFindWithLikes)}
+                  onCardClick={handleCardClick}
                 />
               )}
               {layout === "tiles" && (
@@ -237,7 +242,7 @@ export default function Home() {
                   onTypeClick={setSelectedType}
                   onGenreClick={setSelectedGenre}
                   onLikeUpdate={handleLikeUpdate}
-                  onCardClick={(find) => setSelectedMusic(find as SpotifyFindWithLikes)}
+                  onCardClick={handleCardClick}
                 />
               )}
             </>

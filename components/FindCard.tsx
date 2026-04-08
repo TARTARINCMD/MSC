@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import SpotifyImage from "./SpotifyImage";
@@ -15,7 +15,7 @@ interface FindCardProps {
   onLikeUpdate?: (findId: string, liked: boolean, likeCount: number) => void;
 }
 
-export default function FindCard({ find, onLikeUpdate }: FindCardProps) {
+function FindCard({ find, onLikeUpdate }: FindCardProps) {
   const { user } = useAuth();
   const [liked, setLiked] = useState(find.liked || false);
   const [likeCount, setLikeCount] = useState(find.likeCount || 0);
@@ -133,3 +133,5 @@ export default function FindCard({ find, onLikeUpdate }: FindCardProps) {
     </a>
   );
 }
+
+export default memo(FindCard);

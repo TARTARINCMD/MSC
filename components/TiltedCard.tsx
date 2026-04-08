@@ -1,7 +1,7 @@
 "use client";
 
 import type { SpringOptions } from "motion/react";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { motion, useMotionValue, useSpring } from "motion/react";
 import "./TiltedCard.css";
 
@@ -55,7 +55,7 @@ export default function TiltedCard({
     mass: 1,
   });
 
-  const [lastY, setLastY] = useState<number>(0);
+  const lastY = useRef<number>(0);
 
   function handleMouse(e: React.MouseEvent<HTMLElement>) {
     if (!ref.current) return;
@@ -72,9 +72,9 @@ export default function TiltedCard({
     x.set(e.clientX - rect.left);
     y.set(e.clientY - rect.top);
 
-    const velocityY = offsetY - lastY;
+    const velocityY = offsetY - lastY.current;
     rotateFigcaption.set(-velocityY * 0.6);
-    setLastY(offsetY);
+    lastY.current = offsetY;
   }
 
   function handleMouseEnter() {

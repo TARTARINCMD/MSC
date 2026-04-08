@@ -1,13 +1,12 @@
 "use client";
 
 import { useAuth } from "@/components/SupabaseAuthProvider";
-import { useSidebar } from "./SidebarContext";
 
 export default function ContentWrapper({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
   return (
-    <div className={!loading && user ? "pl-24" : ""}>
+    <div className={user ? "pl-24" : ""}>
       {children}
     </div>
   );

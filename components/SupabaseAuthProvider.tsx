@@ -25,16 +25,17 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Use server-verified getUser() for initial load to avoid stale sessions
+    // (e.g. user deleted from Supabase dashboard still having a local JWT)
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      setUser(u);
-      setLoading(false);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();

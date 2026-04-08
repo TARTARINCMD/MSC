@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import { Heart } from "lucide-react";
@@ -16,7 +16,7 @@ interface FindCardHorizontalProps {
   onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean }) => void;
 }
 
-export default function FindCardHorizontal({ 
+function FindCardHorizontal({
   find, 
   onTypeClick, 
   onGenreClick, 
@@ -243,3 +243,5 @@ export default function FindCardHorizontal({
     </div>
   );
 }
+
+export default memo(FindCardHorizontal);

@@ -69,13 +69,12 @@ export default function SignupPage() {
         router.push("/");
         router.refresh();
       } else {
-        setError(
-          "Check your email to confirm your account, then sign in."
-        );
+        setError("Check your email to confirm your account, then sign in.");
+        setLoading(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("Signup error:", err);
       setError("Something went wrong");
-    } finally {
       setLoading(false);
     }
   };

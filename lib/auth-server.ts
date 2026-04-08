@@ -4,7 +4,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js";
 export async function getAuthUser(): Promise<SupabaseUser | null> {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.user ?? null;
 }
