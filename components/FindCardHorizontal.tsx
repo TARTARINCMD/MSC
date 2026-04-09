@@ -141,9 +141,9 @@ function FindCardHorizontal({
       onClick={handleCardClick}
       className="group cursor-pointer"
     >
-      <div className="rounded-lg bg-card border border-border p-6 max-w-2xl mx-auto h-full flex items-center gap-6 transition-colors duration-200 group-hover:bg-muted/50 hover:border-border/80">
+      <div className="rounded-lg bg-card border border-border p-6 max-w-2xl mx-auto h-full flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 transition-colors duration-200 group-hover:bg-muted/50 hover:border-border/80">
         {/* Cover Image */}
-        <div className="relative shrink-0 w-40 h-40 md:w-48 md:h-48 rounded-lg overflow-hidden bg-muted">
+        <div className="relative w-full h-48 sm:w-40 sm:h-40 md:w-48 md:h-48 shrink-0 rounded-lg overflow-hidden bg-muted">
           {imageUrl ? (
             <Image
               src={imageUrl}

@@ -44,7 +44,7 @@ interface SpotifyFindWithLikes {
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
-  const { isOpen: sidebarOpen } = useSidebar();
+  const { isOpen: sidebarOpen, isMobileOpen } = useSidebar();
   const [finds, setFinds] = useState<SpotifyFindWithLikes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -55,6 +55,24 @@ export default function Home() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedMusic, setSelectedMusic] = useState<SpotifyFindWithLikes | null>(null);
   const [layout, setLayout] = useState<LayoutType>("grid");
+  const [toolbarVisible, setToolbarVisible] = useState(true);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY < 10) {
+        setToolbarVisible(true);
+      } else if (currentY < lastY) {
+        setToolbarVisible(true);
+      } else if (currentY > lastY + 8) {
+        setToolbarVisible(false);
+      }
+      lastY = currentY;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const fetchFinds = useCallback(async () => {
     if (!user) {
@@ -140,19 +158,19 @@ export default function Home() {
       {/* Top fade gradient overlay - outside blurred container, only in cards area */}
       <div 
         className="pointer-events-none fixed top-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
-        style={{ 
+        style={{
           zIndex: 35, // Below toolbar (z-40) but above blurred content
-          left: user ? '6rem' : '0'
+          left: 0
         }}
       />
       
       {/* Main content area */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'blur-sm' : ''}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen && !isMobileOpen ? 'blur-sm' : ''}`}>
         <main className="container mx-auto px-4 pt-4 pb-8">
           {/* Sticky Toolbar */}
-          <div className="sticky top-4 z-40 mb-6">
-            <div id="toolbar" className="flex items-center justify-between gap-4 p-3 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg">
-              <div className="flex items-center gap-3 flex-wrap">
+          <div className={`sticky top-4 z-40 mb-6 transition-all duration-300 ${toolbarVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
+            <div id="toolbar" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg">
+              <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
                 {user && (
                   <div className="flex items-center bg-secondary/50 rounded-lg p-1">
                     <button
@@ -193,7 +211,7 @@ export default function Home() {
               {user && (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap flex-shrink-0"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap flex-shrink-0 self-end sm:self-auto"
                 >
                   <Plus className="h-4 w-4" />
                   Add Music

@@ -50,7 +50,7 @@ export default function DateSort({ sortOrder, onSortChange }: DateSortProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[150px]">
+        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[130px] max-w-[90vw]">
           {sortOptions.map((option) => (
             <button
               key={option.value}

@@ -298,7 +298,7 @@ export default function NewsPage() {
       <div className={`transition-all duration-300 ${sidebarOpen ? "blur-sm" : ""}`}>
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8 text-left">
-            <h1 className="text-4xl font-bold mb-2">News</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2">News</h1>
             <p className="text-muted-foreground">
               Latest news about artists on Sharetune
             </p>

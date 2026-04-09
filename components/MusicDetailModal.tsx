@@ -145,9 +145,9 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-sm bg-black/50"
       onClick={handleBackdropClick}
     >
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-[90vh] flex flex-col">
         {/* Header with image */}
-        <div className="relative h-80 bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-pink-900/40 overflow-hidden">
+        <div className="relative h-48 sm:h-64 md:h-80 bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-pink-900/40 overflow-hidden shrink-0">
           {/* Blurred background */}
           {music.imageUrl && (
             <div className="absolute inset-0">
@@ -184,7 +184,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {/* Title and Artist */}
           <div className="mb-4">
             <h2 className="text-3xl font-bold mb-2">{music.title}</h2>
@@ -292,7 +292,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
           )}
 
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <a
               href={music.spotifyUrl}
               target="_blank"

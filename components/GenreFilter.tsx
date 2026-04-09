@@ -59,7 +59,7 @@ export default function GenreFilter({ selectedGenre, onGenreChange }: GenreFilte
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[200px] max-h-60 overflow-y-auto">
+        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[160px] max-w-[90vw] max-h-60 overflow-y-auto">
           <div className="p-2 border-b border-border">
             <input
               type="text"

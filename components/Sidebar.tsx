@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Music, Users, Newspaper, LogOut } from "lucide-react";
+import { Music, Users, Newspaper, LogOut, X } from "lucide-react";
 import CircularText from "./CircularText";
 import { ThemeToggle } from "./theme-toggle";
 import { useSidebar } from "./SidebarContext";
 
 export default function Sidebar() {
-  const { isOpen, setIsOpen } = useSidebar();
+  const { isOpen, setIsOpen, isMobileOpen, setIsMobileOpen } = useSidebar();
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -27,11 +27,22 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen bg-card border-r border-border z-50 transition-all duration-300 ${
-          isOpen ? "w-72" : "w-24"
-        }`}
+        className={[
+          "fixed left-0 top-0 h-screen bg-card border-r border-border z-50 transition-all duration-300 w-72",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+          "md:translate-x-0",
+          isOpen ? "md:w-72" : "md:w-24",
+        ].join(" ")}
         style={{
           boxShadow: isOpen ? '4px 0 24px rgba(0, 0, 0, 0.3)' : 'none'
         }}
@@ -40,7 +51,7 @@ export default function Sidebar() {
       >
         <div className="flex flex-col h-full">
           {/* Logo Section */}
-          <div className="flex items-center justify-center py-6 overflow-hidden w-full">
+          <div className="relative flex items-center justify-center py-6 overflow-hidden w-full">
             <div className={`transition-all duration-300 ${isOpen ? "scale-[0.85]" : "scale-[0.35]"} flex items-center justify-center`}>
               <CircularText
                 text="SHARE+TUNE+"
@@ -49,6 +60,14 @@ export default function Sidebar() {
                 className="custom-class"
               />
             </div>
+            {/* Mobile close button */}
+            <button
+              className="md:hidden absolute top-3 right-3 p-2 rounded-md hover:bg-accent transition-colors"
+              onClick={() => setIsMobileOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           {/* Navigation Items */}
@@ -61,6 +80,7 @@ export default function Sidebar() {
                   <Link
                     key={item.path}
                     href={item.path}
+                    onClick={() => setIsMobileOpen(false)}
                     className={`flex items-center justify-center gap-3 px-3 py-3 rounded-lg transition-all ${
                       isActive
                         ? "text-foreground"
@@ -127,4 +147,3 @@ export default function Sidebar() {
     </>
   );
 }
-

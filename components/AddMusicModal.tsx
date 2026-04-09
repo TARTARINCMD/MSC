@@ -196,7 +196,7 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-sm bg-black/50"
       onClick={handleBackdropClick}
     >
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg p-6 animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Add Music</h2>
           <button

@@ -43,7 +43,7 @@ export default function TypeFilter({ selectedType, onTypeChange }: TypeFilterPro
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[150px]">
+        <div className="absolute top-full left-0 mt-2 bg-card border border-border rounded-md shadow-lg z-[100] min-w-[130px] max-w-[90vw]">
           {types.map((type) => (
             <button
               key={type}

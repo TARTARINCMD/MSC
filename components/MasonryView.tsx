@@ -17,8 +17,10 @@ export default function MasonryView({ finds, onCardClick }: MasonryViewProps) {
     artist: find.artist,
   }));
 
+  const estimatedHeight = Math.max(600, Math.ceil(finds.length / 4) * 280);
+
   return (
-    <div style={{ height: '62.5rem', position: 'relative' }}>
+    <div style={{ height: estimatedHeight, position: 'relative' }}>
       <Masonry
         items={masonryItems}
         ease="power3.out"
