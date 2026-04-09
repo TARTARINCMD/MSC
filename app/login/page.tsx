@@ -17,9 +17,19 @@ export default function LoginPage() {
     password: "",
   });
 
+  const allFieldsFilled =
+    formData.email.trim() !== "" && formData.password !== "";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -50,9 +60,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <Link
           href="/"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+          className="inline-flex items-center text-base text-muted-foreground hover:text-foreground transition-colors mb-6 font-medium"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-5 w-5" />
           Back to home
         </Link>
 
@@ -63,32 +73,33 @@ export default function LoginPage() {
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-              {error}
+            <div className="mb-4 p-4 bg-yellow-500/15 border border-yellow-500/30 text-yellow-700 dark:text-yellow-400 rounded-md flex items-center gap-3">
+              <span className="text-base shrink-0">⚠</span>
+              <p className="font-medium text-base leading-snug">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2">
+              <label htmlFor="email" className="block text-sm font-medium mb-1">
                 Email
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={formData.email}
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                required
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Your email address"
+                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
               />
             </div>
 
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium mb-2"
+                className="block text-sm font-medium mb-1"
               >
                 Password
               </label>
@@ -101,7 +112,8 @@ export default function LoginPage() {
                     setFormData({ ...formData, password: e.target.value })
                   }
                   required
-                  className="w-full px-3 py-2 pr-10 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Your password"
+                  className="w-full px-3 py-2 pr-10 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
                 />
                 <button
                   type="button"
@@ -113,21 +125,25 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary text-primary-foreground py-2 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-            >
-              {loading ? "Logging in..." : "Log in"}
-            </button>
+            <div className="border-t border-border pt-4">
+              <button
+                type="submit"
+                disabled={loading || !allFieldsFilled}
+                className="w-full bg-primary text-primary-foreground py-2 rounded-md font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:bg-primary/75 enabled:hover:scale-[1.02] enabled:hover:shadow-md"
+              >
+                {loading ? "Logging in..." : "Log in"}
+              </button>
+            </div>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
+          <div className="mt-3 text-center">
+            <p className="text-sm text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="text-primary hover:underline">
+                Sign up
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

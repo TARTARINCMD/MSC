@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 import GenreSelect from "@/components/GenreSelect";
 import {
   extractSpotifyId,
@@ -31,6 +31,18 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fetchingImage, setFetchingImage] = useState(false);
+  const [typeOpen, setTypeOpen] = useState(false);
+  const typeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (typeRef.current && !typeRef.current.contains(e.target as Node)) {
+        setTypeOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
@@ -66,8 +78,7 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
           setFormData((prev) => ({
             ...prev,
             imageUrl: thumbnail || prev.imageUrl,
-            title: prev.title || data.title || prev.title,
-            artist: prev.artist || data.author_name || prev.artist,
+            title: prev.title || data.title || "",
           }));
         }
         return;
@@ -84,8 +95,7 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
           setFormData((prev) => ({
             ...prev,
             imageUrl: data.imageUrl || prev.imageUrl,
-            title: prev.title || data.title || prev.title,
-            artist: prev.artist || data.artist || prev.artist,
+            title: prev.title || data.title || "",
           }));
         }
         return;
@@ -97,11 +107,11 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
         );
         if (response.ok) {
           const data = await response.json();
+          // oEmbed title is "Song · Artist" format — split on " · "
           setFormData((prev) => ({
             ...prev,
             imageUrl: data.thumbnail_url || prev.imageUrl,
-            title: prev.title || data.title || prev.title,
-            artist: prev.artist || data.author_name || prev.artist,
+            title: prev.title || data.title || "",
           }));
         }
         return;
@@ -157,7 +167,6 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
         return;
       }
 
-      // Success - close modal and reset form
       setFormData({
         title: "",
         artist: "",
@@ -188,7 +197,6 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
       onClick={handleBackdropClick}
     >
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg p-6 animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">Add Music</h2>
           <button
@@ -199,118 +207,130 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
           </button>
         </div>
 
-        {/* Error message */}
         {error && (
           <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
             {error}
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="spotifyUrl" className="block text-sm font-medium mb-2">
-              Streaming URL *
-            </label>
-            <input
-              id="spotifyUrl"
-              type="url"
-              value={formData.spotifyUrl}
-              onChange={(e) => setFormData({ ...formData, spotifyUrl: e.target.value })}
-              onBlur={(e) => fetchMetadata(e.target.value)}
-              placeholder="Spotify, Apple Music, YouTube Music, or YouTube link"
-              required
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Paste a streaming link. Title/artist and cover auto-fetch for Spotify, YouTube, and Apple Music.
-            </p>
-          </div>
-
-          {/* Preview cover image */}
-          {(formData.imageUrl || fetchingImage) && (
-            <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-md">
-              {fetchingImage ? (
-                <div className="h-16 w-16 bg-muted animate-pulse rounded-md" />
-              ) : (
-                <img
-                  src={formData.imageUrl}
-                  alt="Cover"
-                  className="h-16 w-16 object-cover rounded-md"
-                />
-              )}
-              <span className="text-sm text-muted-foreground">
-                {fetchingImage ? "Fetching cover..." : "Cover image ready"}
-              </span>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="spotifyUrl" className="block text-sm font-medium mb-2 px-1">
+                Streaming URL
+              </label>
+              <input
+                id="spotifyUrl"
+                type="url"
+                value={formData.spotifyUrl}
+                onChange={(e) => setFormData({ ...formData, spotifyUrl: e.target.value })}
+                onBlur={(e) => fetchMetadata(e.target.value)}
+                placeholder="Spotify, Apple Music, YouTube Music, or YouTube link"
+                required
+                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              />
             </div>
-          )}
 
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium mb-2">
-              Title *
-            </label>
-            <input
-              id="title"
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Song or album name"
-              required
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
+            {(formData.imageUrl || fetchingImage) && (
+              <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-md">
+                {fetchingImage ? (
+                  <div className="h-16 w-16 bg-muted animate-pulse rounded-md" />
+                ) : (
+                  <img
+                    src={formData.imageUrl}
+                    alt="Cover"
+                    className="h-16 w-16 object-cover rounded-md"
+                  />
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {fetchingImage ? "Fetching cover..." : "Cover image ready"}
+                </span>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium mb-2 px-1">
+                Title
+              </label>
+              <input
+                id="title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Song or album name"
+                required
+                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="artist" className="block text-sm font-medium mb-2 px-1">
+                Artist
+              </label>
+              <input
+                id="artist"
+                type="text"
+                value={formData.artist}
+                onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
+                placeholder="Artist name"
+                required
+                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2 px-1">
+                Type
+              </label>
+              <div className="relative" ref={typeRef}>
+                <button
+                  type="button"
+                  onClick={() => setTypeOpen((prev) => !prev)}
+                  className="w-full px-3 py-2 pr-9 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-left"
+                >
+                  {formData.type.charAt(0).toUpperCase() + formData.type.slice(1)}
+                </button>
+                <span className="absolute inset-y-0 right-0 flex items-center pr-2 text-muted-foreground pointer-events-none">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${typeOpen ? "rotate-180" : ""}`} />
+                </span>
+                {typeOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-full bg-card border border-border rounded-md shadow-lg z-[120]">
+                    {(["track", "album", "playlist", "podcast"] as const).map((opt) => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setFormData({ ...formData, type: opt });
+                          setTypeOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="genre" className="block text-sm font-medium mb-2 px-1">
+                Genre
+              </label>
+              <GenreSelect
+                value={formData.genre}
+                onChange={(value) => setFormData({ ...formData, genre: value })}
+                placeholder="Select a genre"
+                inputClassName="px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="artist" className="block text-sm font-medium mb-2">
-              Artist *
-            </label>
-            <input
-              id="artist"
-              type="text"
-              value={formData.artist}
-              onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
-              placeholder="Artist name"
-              required
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="type" className="block text-sm font-medium mb-2">
-              Type *
-            </label>
-            <select
-              id="type"
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-              required
-              className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="track">Track</option>
-              <option value="album">Album</option>
-              <option value="playlist">Playlist</option>
-              <option value="podcast">Podcast</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="genre" className="block text-sm font-medium mb-2">
-              Genre *
-            </label>
-            <GenreSelect
-              value={formData.genre}
-              onChange={(value) => setFormData({ ...formData, genre: value })}
-              placeholder="Select a genre"
-              inputClassName="px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
-              If the genre is not on the list, choose “Other” and add details in the description.
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-2">
-              Description (Optional)
+          <div className="pt-10">
+            <label htmlFor="description" className="block text-sm font-medium mb-2 px-1">
+              Description{" "}
+              <span className="text-muted-foreground font-normal">(Optional)</span>
             </label>
             <textarea
               id="description"
