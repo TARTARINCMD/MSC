@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import { Newspaper, Bookmark } from "lucide-react";
-import SearchableDropdown from "@/components/SearchableDropdown";
 import { useSidebar } from "@/components/SidebarContext";
 import { apiFetch } from "@/lib/api-fetch";
 
@@ -80,22 +79,34 @@ function NewsCard({
   onUnsave: () => void;
   highlightTerms: HighlightTerm[];
 }) {
+  const fresh = isFresh(article.pubDate);
+
   return (
-    <div className="group flex items-center justify-between gap-4 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
+    <div
+      className={`group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/30 hover:border-black dark:hover:border-white/60 ${
+        fresh
+          ? "border-l-2 border-l-primary bg-primary/5 border-t border-r border-b border-transparent"
+          : "border border-transparent"
+      }`}
+    >
+      {/* Main content */}
       <a
         href={article.link}
         target="_blank"
         rel="noopener noreferrer"
         className="min-w-0 flex-1"
       >
-        <h2 className="text-sm sm:text-base font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
+        <h2 className="text-base sm:text-lg font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
           {renderHighlightedTitle(article.title, highlightTerms)}
-          {article.keyword && (
-            <span className="text-muted-foreground font-normal"> · {article.keyword}</span>
-          )}
         </h2>
+        <p className="text-sm text-muted-foreground mt-1 truncate">
+          {[article.keyword, article.genre, formatDate(article.pubDate)]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
       </a>
-      <span className="text-muted-foreground text-xs sm:text-sm flex-shrink-0">{formatDate(article.pubDate)}</span>
+
+      {/* Bookmark — always visible */}
       <button
         type="button"
         onClick={(e) => {
@@ -103,10 +114,14 @@ function NewsCard({
           if (isSaved) onUnsave();
           else onSave();
         }}
-        className="flex-shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors"
+        className="flex-shrink-0 p-1.5 rounded-md transition-colors hover:bg-muted/50"
         aria-label={isSaved ? "Remove from saved" : "Save for later"}
       >
-        {isSaved ? <Bookmark className="h-5 w-5 fill-pink-400 text-pink-400" /> : <Bookmark className="h-5 w-5" />}
+        {isSaved ? (
+          <Bookmark className="h-5 w-5 fill-pink-400 text-pink-400" />
+        ) : (
+          <Bookmark className="h-5 w-5 text-muted-foreground opacity-50" />
+        )}
       </button>
     </div>
   );
@@ -122,28 +137,32 @@ function SavedCard({
   highlightTerms: HighlightTerm[];
 }) {
   return (
-    <div className="group flex items-center justify-between gap-4 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
+    <div className="group flex items-center gap-3 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
+      {/* Main content */}
       <a
         href={article.link}
         target="_blank"
         rel="noopener noreferrer"
         className="min-w-0 flex-1"
       >
-        <h2 className="text-sm sm:text-base font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
+        <h2 className="text-base sm:text-lg font-semibold text-card-foreground line-clamp-2 group-hover:text-primary transition-colors">
           {renderHighlightedTitle(article.title, highlightTerms)}
-          {article.keyword && (
-            <span className="text-muted-foreground font-normal"> · {article.keyword}</span>
-          )}
         </h2>
+        <p className="text-sm text-muted-foreground mt-1 truncate">
+          {[article.keyword, formatDate(article.pubDate ?? "")]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
       </a>
-      <span className="text-muted-foreground text-xs sm:text-sm flex-shrink-0">{formatDate(article.pubDate ?? "")}</span>
+
+      {/* Bookmark — always filled pink in saved tab */}
       <button
         type="button"
         onClick={(e) => {
           e.preventDefault();
           onUnsave();
         }}
-        className="flex-shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-muted/50 transition-colors"
+        className="flex-shrink-0 p-1.5 rounded-md hover:bg-muted/50 transition-colors"
         aria-label="Remove from saved"
       >
         <Bookmark className="h-5 w-5 fill-pink-400 text-pink-400" />
@@ -194,7 +213,7 @@ export default function NewsPage() {
     return filtered.sort((a, b) => {
       const dateA = new Date(a.pubDate).getTime();
       const dateB = new Date(b.pubDate).getTime();
-      return dateB - dateA; // Newest first
+      return dateB - dateA;
     });
   }, [articles, selectedGenre]);
 
@@ -304,134 +323,143 @@ export default function NewsPage() {
             </p>
           </div>
 
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="flex items-center bg-secondary/50 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("news")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                activeTab === "news"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Feed
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("saved")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                activeTab === "saved"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Saved{savedArticles.length > 0 ? ` (${savedArticles.length})` : ""}
-            </button>
+          {/* Controls bar — tab switcher only */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex items-center bg-secondary/50 rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("news")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  activeTab === "news"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Feed
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("saved")}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  activeTab === "saved"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Saved{savedArticles.length > 0 ? ` (${savedArticles.length})` : ""}
+              </button>
+            </div>
           </div>
-          {!loading && !error && articles.length > 0 && activeTab === "news" && (
-            <>
-              {genres.length > 0 && (
-                <SearchableDropdown
-                  value={selectedGenre}
-                  onChange={setSelectedGenre}
-                  options={genres}
-                  allLabel="All Genres"
-                  placeholder="All Genres"
-                  searchPlaceholder="Search genres..."
-                />
-              )}
-              {selectedGenre !== "all" && (
+
+          {/* Genre pill row */}
+          {activeTab === "news" && !loading && !error && genres.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 mb-6 -mx-1 px-1">
+              {(["all", ...genres] as string[]).map((g) => (
                 <button
-                  onClick={() => setSelectedGenre("all")}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  key={g}
+                  type="button"
+                  onClick={() => setSelectedGenre(g)}
+                  className={`flex-shrink-0 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    selectedGenre === g
+                      ? "bg-foreground text-background"
+                      : "bg-background text-foreground hover:bg-muted"
+                  }`}
                 >
-                  Clear filters
+                  {g === "all" ? "All" : g}
                 </button>
+              ))}
+            </div>
+          )}
+
+          {/* Loading skeleton */}
+          {loading && (
+            <div className="space-y-1">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-2 py-2 animate-pulse">
+                  <div className="flex-1 min-w-0">
+                    <div className="h-3 bg-muted rounded w-5/6 mb-1.5" />
+                    <div className="h-2.5 bg-muted rounded w-2/5" />
+                  </div>
+                  <div className="h-5 w-5 bg-muted rounded flex-shrink-0" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-12 text-destructive">{error}</div>
+          )}
+
+          {!loading && !error && articles.length === 0 && (
+            <div className="text-center py-16">
+              <Newspaper className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+              <p className="text-muted-foreground">
+                No news found. Add some music to Sharetune and news about those
+                artists will appear here.
+              </p>
+            </div>
+          )}
+
+          {activeTab === "news" && !loading && !error && articles.length > 0 && filteredArticles.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No articles match the selected filters.
+            </div>
+          )}
+
+          {/* News feed — grouped by time */}
+          {activeTab === "news" && !loading && !error && filteredArticles.length > 0 && (
+            <div className="space-y-1">
+              {groupArticlesByTime(filteredArticles).map(({ bucket, items }) => (
+                <div key={bucket} className="grid grid-cols-[7rem_1fr] gap-x-4 mt-4 first:mt-0">
+                  {/* Bucket label — left column */}
+                  <div className="pt-2">
+                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
+                      {bucket}
+                    </span>
+                  </div>
+                  {/* Articles — right column */}
+                  <div className="space-y-0.5 border-l border-border pl-4">
+                    {items.map((article, i) => (
+                      <NewsCard
+                        key={`${article.link}-${i}`}
+                        article={article}
+                        isSaved={savedLinks.has(article.link)}
+                        onSave={() => saveArticle(article)}
+                        onUnsave={() => unsaveArticle(article.link)}
+                        highlightTerms={allHighlightTerms}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Saved tab */}
+          {activeTab === "saved" && (
+            <>
+              {savedArticles.length === 0 && (
+                <div className="text-center py-16">
+                  <Bookmark className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
+                  <p className="text-muted-foreground">
+                    No saved articles yet. Save articles from the News tab to build your collection.
+                  </p>
+                </div>
+              )}
+              {savedArticles.length > 0 && (
+                <div className="space-y-0.5">
+                  {savedArticles.map((article) => (
+                    <SavedCard
+                      key={article.id}
+                      article={article}
+                      onUnsave={() => unsaveArticle(article.link)}
+                      highlightTerms={allHighlightTerms}
+                    />
+                  ))}
+                </div>
               )}
             </>
           )}
-        </div>
-
-        {loading && (
-          <div className="space-y-5">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between gap-4 rounded-lg px-2 py-2 animate-pulse"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="h-3 bg-muted rounded w-5/6 mb-1" />
-                  <div className="h-3 bg-muted rounded w-2/3" />
-                </div>
-                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                  <div className="h-3 bg-muted rounded w-16" />
-                  <div className="h-3 bg-muted rounded w-20" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <div className="text-center py-12 text-destructive">{error}</div>
-        )}
-
-        {!loading && !error && articles.length === 0 && (
-          <div className="text-center py-16">
-            <Newspaper className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-            <p className="text-muted-foreground">
-              No news found. Add some music to Sharetune and news about those
-              artists will appear here.
-            </p>
-          </div>
-        )}
-
-        {activeTab === "news" && !loading && !error && articles.length > 0 && filteredArticles.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            No articles match the selected filters.
-          </div>
-        )}
-
-        {activeTab === "news" && !loading && !error && filteredArticles.length > 0 && (
-          <div className="space-y-5">
-            {filteredArticles.map((article, i) => (
-              <NewsCard
-                key={`${article.link}-${i}`}
-                article={article}
-                isSaved={savedLinks.has(article.link)}
-                onSave={() => saveArticle(article)}
-                onUnsave={() => unsaveArticle(article.link)}
-                highlightTerms={allHighlightTerms}
-              />
-            ))}
-          </div>
-        )}
-
-        {activeTab === "saved" && (
-          <>
-            {savedArticles.length === 0 && (
-              <div className="text-center py-16">
-                <Bookmark className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-                <p className="text-muted-foreground">
-                  No saved articles yet. Save articles from the News tab to build your collection.
-                </p>
-              </div>
-            )}
-            {savedArticles.length > 0 && (
-              <div className="space-y-5">
-                {savedArticles.map((article) => (
-                  <SavedCard
-                    key={article.id}
-                    article={article}
-                    onUnsave={() => unsaveArticle(article.link)}
-                    highlightTerms={allHighlightTerms}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
         </div>
       </div>
     </div>
@@ -460,4 +488,32 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+function isFresh(pubDate: string): boolean {
+  return (new Date().getTime() - new Date(pubDate).getTime()) < 2 * 3600000;
+}
+
+type TimeBucket = "Today" | "Yesterday" | "This Week" | "Earlier";
+
+function getTimeBucket(pubDate: string): TimeBucket {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+  const date = new Date(pubDate);
+  if (date >= todayStart) return "Today";
+  if (date >= yesterdayStart) return "Yesterday";
+  if ((now.getTime() - date.getTime()) < 7 * 86400000) return "This Week";
+  return "Earlier";
+}
+
+function groupArticlesByTime(articles: NewsArticle[]): { bucket: TimeBucket; items: NewsArticle[] }[] {
+  const order: TimeBucket[] = ["Today", "Yesterday", "This Week", "Earlier"];
+  const map = new Map<TimeBucket, NewsArticle[]>();
+  for (const a of articles) {
+    const b = getTimeBucket(a.pubDate);
+    if (!map.has(b)) map.set(b, []);
+    map.get(b)!.push(a);
+  }
+  return order.filter((b) => map.has(b)).map((b) => ({ bucket: b, items: map.get(b)! }));
 }

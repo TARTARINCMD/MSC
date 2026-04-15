@@ -4,16 +4,17 @@ import { useState, useEffect, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import TiltedCard from "./TiltedCard";
-import { Heart } from "lucide-react";
+import { Heart, MessageCircle } from "lucide-react";
+import { getGenreColor } from "@/lib/genres";
 import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
 import { apiFetch } from "@/lib/api-fetch";
 
 interface FindCardProps {
-  find: SpotifyFind & { likeCount?: number; liked?: boolean };
+  find: SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number };
   onTypeClick?: (type: string) => void;
   onGenreClick?: (genre: string) => void;
   onLikeUpdate?: (findId: string, liked: boolean, likeCount: number) => void;
-  onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean }) => void;
+  onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number }) => void;
 }
 
 function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCardClick }: FindCardProps) {
@@ -147,20 +148,7 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
       className="block w-full h-full group cursor-pointer"
     >
       <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-colors duration-200 group-hover:bg-muted relative">
-        {/* Like button */}
-        <button
-          onClick={handleLike}
-          disabled={!user || isLiking}
-          className={`absolute bottom-4 right-4 z-10 flex items-center gap-1 transition-all ${
-            !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
-          } ${isAnimating ? "animate-bounce" : ""}`}
-        >
-          <Heart
-            className={`h-6 w-6 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-white hover:text-pink-400"} ${isAnimating ? "scale-125" : ""}`}
-          />
-          <span className={`text-base font-semibold transition-colors ${liked ? "text-pink-500" : "text-white"}`}>{likeCount}</span>
-        </button>
-
+        {/* TiltedCard first so buttons render on top */}
         <TiltedCard
           imageSrc={imageUrl}
           altText={`${find.title} by ${find.artist}`}
@@ -175,6 +163,29 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
           showTooltip={false}
           displayOverlayContent={false}
         />
+
+        {/* Comment + Like buttons — rendered after TiltedCard so they sit on top */}
+        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
+            className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
+          >
+            <MessageCircle className="h-6 w-6 text-white drop-shadow" />
+            <span className="text-base font-semibold text-white drop-shadow">{find.commentCount || 0}</span>
+          </button>
+          <button
+            onClick={handleLike}
+            disabled={!user || isLiking}
+            className={`flex items-center gap-1 transition-all ${
+              !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
+            } ${isAnimating ? "animate-bounce" : ""}`}
+          >
+            <Heart
+              className={`h-6 w-6 transition-all duration-200 drop-shadow ${liked ? "fill-pink-500 text-pink-500" : "text-white"} ${isAnimating ? "scale-125" : ""}`}
+            />
+            <span className={`text-base font-semibold transition-colors drop-shadow ${liked ? "text-pink-500" : "text-white"}`}>{likeCount}</span>
+          </button>
+        </div>
 
         <div className="mt-4 flex flex-col flex-grow">
           <div className="mb-2 flex flex-wrap gap-2">
@@ -200,7 +211,7 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
                   e.stopPropagation();
                   onGenreClick?.(find.genre!);
                 }}
-                className="badge-click inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground cursor-pointer hover:opacity-80 transition-opacity"
+                className={`badge-click inline-block rounded-full px-2 py-1 text-xs font-medium text-white cursor-pointer hover:opacity-80 transition-opacity ${getGenreColor(find.genre!)}`}
               >
                 {find.genre}
               </span>
@@ -229,7 +240,7 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
             )}
           </div>
           <p className="mt-6 text-xs text-muted-foreground">
-            Added on {new Date(find.dateAdded).toLocaleDateString("en-US", {
+            {new Date(find.dateAdded).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
               day: "numeric",

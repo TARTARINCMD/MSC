@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,7 +11,6 @@ import { useSidebar } from "./SidebarContext";
 export default function Sidebar() {
   const { isOpen, setIsOpen, isMobileOpen, setIsMobileOpen } = useSidebar();
   const { user, loading, signOut } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
 
   const navItems = [
@@ -24,6 +22,9 @@ export default function Sidebar() {
   if (loading || !user) {
     return null;
   }
+
+  // On mobile (when drawer is open), treat sidebar as expanded
+  const expanded = isOpen || isMobileOpen;
 
   return (
     <>
@@ -52,7 +53,7 @@ export default function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo Section */}
           <div className="relative flex items-center justify-center py-6 overflow-hidden w-full">
-            <div className={`transition-all duration-300 ${isOpen ? "scale-[0.85]" : "scale-[0.35]"} flex items-center justify-center`}>
+            <div className={`transition-all duration-300 ${expanded ? "scale-[0.85]" : "scale-[0.35]"} flex items-center justify-center`}>
               <CircularText
                 text="SHARE+TUNE+"
                 onHover="goBonkers"
@@ -72,7 +73,7 @@ export default function Sidebar() {
 
           {/* Navigation Items */}
           <nav className="flex-1 py-6">
-            <div className="space-y-1 px-3">
+            <div className="space-y-1 flex flex-col items-center">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.path;
@@ -81,15 +82,17 @@ export default function Sidebar() {
                     key={item.path}
                     href={item.path}
                     onClick={() => setIsMobileOpen(false)}
-                    className={`flex items-center justify-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                      expanded ? "justify-center" : "justify-center"
+                    } ${
                       isActive
                         ? "text-foreground"
                         : "text-muted-foreground/40 hover:text-muted-foreground/70"
                     }`}
-                    title={!isOpen ? item.name : undefined}
+                    title={!expanded ? item.name : undefined}
                   >
                     <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? "text-foreground" : "text-muted-foreground/40"}`} />
-                    <span className={`transition-opacity duration-300 text-center ${isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                    <span className={`transition-opacity duration-300 ${expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
                       {item.name}
                     </span>
                   </Link>
@@ -112,7 +115,7 @@ export default function Sidebar() {
               {/* User info and Logout - Below divider */}
               <div className="p-3 space-y-2">
                 {/* User info */}
-                {isOpen && (
+                {expanded && (
                   <div className="px-3 py-2 text-sm">
                     <p className="font-medium truncate">
                       {(typeof user.user_metadata?.name === "string"
@@ -126,16 +129,12 @@ export default function Sidebar() {
                 {/* Logout */}
                 <button
                   type="button"
-                  onClick={async () => {
-                    await signOut();
-                    router.push("/");
-                    router.refresh();
-                  }}
-                  className="w-full flex items-center justify-center gap-3 px-3 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
-                  title={!isOpen ? "Logout" : undefined}
+                  onClick={() => signOut()}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-all ${expanded ? "justify-center" : "justify-center"}`}
+                  title={!expanded ? "Logout" : undefined}
                 >
                   <LogOut className="h-5 w-5 flex-shrink-0" />
-                  <span className={`transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
+                  <span className={`transition-opacity duration-300 ${expanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
                     Logout
                   </span>
                 </button>

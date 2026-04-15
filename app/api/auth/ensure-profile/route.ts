@@ -19,18 +19,26 @@ export async function POST() {
         ? user.user_metadata.name
         : null) ?? null;
 
-    await prisma.user.upsert({
-      where: { id: user.id },
-      create: {
-        id: user.id,
-        email: user.email,
-        name,
-      },
-      update: {
-        email: user.email,
-        ...(name !== null ? { name } : {}),
-      },
-    });
+    const existingByEmail = await prisma.user.findUnique({ where: { email: user.email } });
+    if (existingByEmail && existingByEmail.id !== user.id) {
+      await prisma.user.update({
+        where: { email: user.email },
+        data: { id: user.id, ...(name !== null ? { name } : {}) },
+      });
+    } else {
+      await prisma.user.upsert({
+        where: { id: user.id },
+        create: {
+          id: user.id,
+          email: user.email,
+          name,
+        },
+        update: {
+          email: user.email,
+          ...(name !== null ? { name } : {}),
+        },
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

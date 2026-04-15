@@ -24,6 +24,7 @@ export async function GET(
         title: true,
         artist: true,
         type: true,
+        genre: true,
         spotifyUrl: true,
         imageUrl: true,
         dateAdded: true,

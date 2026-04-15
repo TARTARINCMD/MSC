@@ -20,6 +20,7 @@ model User {
   
   finds         SpotifyFind[]
   likes         Like[]
+  comments      Comment[]
   followers     Follow[] @relation("UserFollowers")
   following     Follow[] @relation("UserFollowing")
   savedArticles SavedArticle[]
@@ -37,12 +38,27 @@ model SpotifyFind {
   genre       String?
   dateAdded   DateTime @default(now())
   userId      String
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes       Like[]
-  
+  comments    Comment[]
+
   @@index([userId])
   @@index([dateAdded])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  body      String
+  userId    String
+  findId    String
+  createdAt DateTime @default(now())
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  find      SpotifyFind @relation(fields: [findId], references: [id], onDelete: Cascade)
+
+  @@index([findId])
+  @@index([userId])
 }
 
 model Like {

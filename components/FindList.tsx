@@ -4,11 +4,11 @@ import type { SpotifyFind } from "@/lib/data";
 import FindCardWithTilt from "./FindCardWithTilt";
 
 interface FindListProps {
-  finds: (SpotifyFind & { likeCount?: number; liked?: boolean })[];
+  finds: (SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number })[];
   onTypeClick?: (type: any) => void;
   onGenreClick?: (genre: string) => void;
   onLikeUpdate?: (findId: string, liked: boolean, likeCount: number) => void;
-  onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean }) => void;
+  onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number }) => void;
 }
 
 export default function FindList({ finds, onTypeClick, onGenreClick, onLikeUpdate, onCardClick }: FindListProps) {

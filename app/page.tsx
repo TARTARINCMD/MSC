@@ -36,6 +36,7 @@ interface SpotifyFindWithLikes {
   userId: string;
   likeCount?: number;
   liked?: boolean;
+  commentCount?: number;
   user?: {
     name: string | null;
     email: string;
@@ -83,7 +84,7 @@ export default function Home() {
     try {
       const response = await apiFetch(`/api/finds?scope=${viewMode}`);
       if (response.ok) {
-        const data = await response.json();
+        const data: SpotifyFindWithLikes[] = await response.json();
         setFinds(data);
       } else {
         setError("Failed to load music");
@@ -155,15 +156,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top fade gradient overlay - outside blurred container, only in cards area */}
-      <div 
-        className="pointer-events-none fixed top-0 right-0 h-[10rem] bg-gradient-to-b from-background via-background/70 to-transparent"
-        style={{
-          zIndex: 35, // Below toolbar (z-40) but above blurred content
-          left: 0
-        }}
+      {/* Top fade gradient overlay */}
+      <div
+        className="pointer-events-none fixed top-0 right-0 h-[5rem] bg-gradient-to-b from-background via-background/60 to-transparent"
+        style={{ zIndex: 35, left: 0 }}
       />
-      
+
       {/* Main content area */}
       <div className={`transition-all duration-300 ${sidebarOpen && !isMobileOpen ? 'blur-sm' : ''}`}>
         <main className="container mx-auto px-4 pt-4 pb-8">
@@ -219,6 +217,7 @@ export default function Home() {
               )}
             </div>
           </div>
+
           {loading && (
             <div className="text-center py-12 text-muted-foreground">
               Loading music...
@@ -269,12 +268,12 @@ export default function Home() {
       </div>
 
       {/* Add Music Modal */}
-      <AddMusicModal 
-        isOpen={isAddModalOpen} 
+      <AddMusicModal
+        isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false);
           fetchFinds();
-        }} 
+        }}
       />
 
       {/* Music Detail Modal */}
@@ -285,6 +284,7 @@ export default function Home() {
           fetchFinds();
           setSelectedMusic(null);
         }}
+        onCommentChange={() => fetchFinds()}
         music={selectedMusic}
         onLikeUpdate={handleLikeUpdate}
       />

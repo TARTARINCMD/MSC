@@ -22,21 +22,36 @@ export async function GET() {
         id: true,
         name: true,
         followers: {
-          where: {
-            followerId: currentUserId,
-          },
-          select: {
-            id: true,
-          },
+          where: { followerId: currentUserId },
+          select: { id: true },
+        },
+        finds: {
+          select: { genre: true },
         },
       },
     });
 
-    const formattedUsers = users.map((user) => ({
-      id: user.id,
-      name: user.name,
-      isFollowing: user.followers.length > 0,
-    }));
+    const formattedUsers = users.map((user) => {
+      // Count genre occurrences and pick top 3
+      const genreCounts: Record<string, number> = {};
+      for (const find of user.finds) {
+        if (find.genre) {
+          genreCounts[find.genre] = (genreCounts[find.genre] ?? 0) + 1;
+        }
+      }
+      const topGenres = Object.entries(genreCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([genre]) => genre);
+
+      return {
+        id: user.id,
+        name: user.name,
+        isFollowing: user.followers.length > 0,
+        topGenres,
+        findCount: user.finds.length,
+      };
+    });
 
     return NextResponse.json(formattedUsers);
   } catch (error) {

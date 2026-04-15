@@ -1,17 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
-import { useRouter } from "next/navigation";
-import { X, ExternalLink, Trash2, Edit, Heart } from "lucide-react";
+import { X, ExternalLink, Trash2, Edit, Heart, MessageCircle, Send } from "lucide-react";
 import GenreSelect from "@/components/GenreSelect";
 import { getPlatformFromUrl, getPlatformLabel } from "@/lib/streaming";
+import { getGenreColor } from "@/lib/genres";
 import { apiFetch } from "@/lib/api-fetch";
+
+interface Comment {
+  id: string;
+  body: string;
+  createdAt: string;
+  userId: string;
+  user: {
+    name: string | null;
+    email: string;
+  };
+}
 
 interface MusicDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate?: () => void;
+  onCommentChange?: () => void;
   music: {
     id: string;
     title: string;
@@ -26,6 +38,7 @@ interface MusicDetailModalProps {
     userId: string;
     likeCount?: number;
     liked?: boolean;
+    commentCount?: number;
     user?: {
       name: string | null;
       email: string;
@@ -34,9 +47,8 @@ interface MusicDetailModalProps {
   onLikeUpdate?: (findId: string, liked: boolean, likeCount: number) => void;
 }
 
-export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onLikeUpdate }: MusicDetailModalProps) {
+export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentChange, music, onLikeUpdate }: MusicDetailModalProps) {
   const { user } = useAuth();
-  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [description, setDescription] = useState("");
@@ -48,37 +60,110 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
   const [likeCount, setLikeCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
 
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  // Reset everything when a different music item is opened
+  const prevMusicId = useRef<string | null>(null);
   useEffect(() => {
-    if (music) {
+    if (music && music.id !== prevMusicId.current) {
+      prevMusicId.current = music.id;
       setDescription(music.description || "");
       setType(music.type);
       setGenre(music.genre || "");
       setLiked(music.liked || false);
       setLikeCount(music.likeCount || 0);
+      setIsEditing(false);
+      setShowDeleteConfirm(false);
+      setError("");
+      setComments([]);
+      setNewComment("");
+      fetchComments(music.id);
     }
   }, [music]);
+
+
+  const fetchComments = async (findId: string) => {
+    setCommentsLoading(true);
+    try {
+      const response = await apiFetch(`/api/finds/${findId}/comments`);
+      if (response.ok) setComments(await response.json());
+    } catch {
+      // silently fail
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !music || !newComment.trim() || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const response = await apiFetch(`/api/finds/${music.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: newComment.trim() }),
+      });
+
+      if (response.ok) {
+        const comment = await response.json();
+        setComments((prev) => [...prev, comment]);
+        setNewComment("");
+        setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+        onCommentChange?.();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!music) return;
+    try {
+      const response = await apiFetch(`/api/finds/${music.id}/comments/${commentId}`, { method: "DELETE" });
+      if (response.ok) {
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
+        onCommentChange?.();
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setCommentToDelete(null);
+    }
+  };
 
   if (!isOpen || !music) return null;
 
   const isOwner = !!user && user.id === music.userId;
+  const platform = getPlatformFromUrl(music.spotifyUrl);
+  const platformLabel = getPlatformLabel(platform);
+  const platformHoverClass =
+    platform === "spotify" ? "hover:bg-green-600 hover:border-green-600" :
+    platform === "apple_music" ? "hover:bg-pink-600 hover:border-pink-600" :
+    platform === "youtube" || platform === "youtube_music" ? "hover:bg-red-600 hover:border-red-600" :
+    "hover:bg-primary/90";
 
   const handleLike = async () => {
     if (!user || isLiking) return;
-
     setIsLiking(true);
     try {
-      const response = await apiFetch(`/api/finds/${music.id}/like`, {
-        method: "POST",
-      });
-
+      const response = await apiFetch(`/api/finds/${music.id}/like`, { method: "POST" });
       if (response.ok) {
         const data = await response.json();
         setLiked(data.liked);
         setLikeCount(data.likeCount);
         onLikeUpdate?.(music.id, data.liked, data.likeCount);
       }
-    } catch (error) {
-      console.error("Error liking:", error);
+    } catch {
+      // silently fail
     } finally {
       setIsLiking(false);
     }
@@ -87,17 +172,14 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
   const handleDelete = async () => {
     setLoading(true);
     try {
-      const response = await apiFetch(`/api/finds/${music.id}`, {
-        method: "DELETE",
-      });
-
+      const response = await apiFetch(`/api/finds/${music.id}`, { method: "DELETE" });
       if (response.ok) {
         onUpdate?.();
         onClose();
       } else {
         setError("Failed to delete");
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong");
     } finally {
       setLoading(false);
@@ -108,26 +190,19 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
   const handleUpdate = async () => {
     setLoading(true);
     setError("");
-
     try {
       const response = await apiFetch(`/api/finds/${music.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: description || null,
-          type,
-          genre: genre || null,
-        }),
+        body: JSON.stringify({ description: description || null, type, genre: genre || null }),
       });
-
       if (response.ok) {
         setIsEditing(false);
         onUpdate?.();
-        // Don't close modal, just update and stay open
       } else {
         setError("Failed to update");
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong");
     } finally {
       setLoading(false);
@@ -135,9 +210,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+    if (e.target === e.currentTarget) onClose();
   };
 
   return (
@@ -146,34 +219,14 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
       onClick={handleBackdropClick}
     >
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-[90vh] flex flex-col">
-        {/* Header with image */}
-        <div className="relative h-48 sm:h-64 md:h-80 bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-pink-900/40 overflow-hidden shrink-0">
-          {/* Blurred background */}
+
+        {/* ── TOP: blurred bg + cover left / info right ── */}
+        <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-pink-900/40">
           {music.imageUrl && (
             <div className="absolute inset-0">
-              <img
-                src={music.imageUrl}
-                alt=""
-                className="w-full h-full object-cover blur-3xl opacity-30 scale-110"
-              />
+              <img src={music.imageUrl} alt="" className="w-full h-full object-cover blur-3xl opacity-30 scale-110" />
             </div>
           )}
-          
-          {/* Main image - centered and contained */}
-          <div className="relative h-full flex items-center justify-center p-6">
-            {music.imageUrl ? (
-              <img
-                src={music.imageUrl}
-                alt={music.title}
-                className="max-h-full max-w-full object-contain shadow-2xl rounded-lg"
-              />
-            ) : (
-              <div className="text-muted-foreground text-center">
-                <div className="text-4xl mb-2">🎵</div>
-                <p>No cover image</p>
-              </div>
-            )}
-          </div>
 
           <button
             onClick={onClose}
@@ -181,197 +234,293 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, music, onL
           >
             <X className="h-5 w-5 text-white" />
           </button>
-        </div>
 
-        {/* Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
-          {/* Title and Artist */}
-          <div className="mb-4">
-            <h2 className="text-3xl font-bold mb-2">{music.title}</h2>
-            <p className="text-xl text-muted-foreground">{music.artist}</p>
-          </div>
+          {/* Cover stretches full height, info column beside it */}
+          <div className="relative flex items-stretch gap-0">
+            {/* Cover — full height of the gradient block */}
+            <div className="shrink-0 w-28 sm:w-36 md:w-44 overflow-hidden bg-black/30">
+              {music.imageUrl ? (
+                <img src={music.imageUrl} alt={music.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-3xl">🎵</div>
+              )}
+            </div>
 
-          {/* Metadata - Editable if owner and in edit mode */}
-          <div className="mb-4">
-            {isEditing && isOwner ? (
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="px-3 py-1 bg-background border border-border rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="track">Track</option>
-                  <option value="album">Album</option>
-                  <option value="playlist">Playlist</option>
-                  <option value="podcast">Podcast</option>
-                </select>
-                <GenreSelect
-                  value={genre}
-                  onChange={(value) => setGenre(value)}
-                  placeholder="Genre (optional)"
-                  inputClassName="px-3 py-1 bg-background border border-border rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary"
-                  dropdownClassName="min-w-[200px]"
-                />
-                <span className="w-full text-xs text-muted-foreground">
-                  If not listed, choose “Other” and note it in the description.
-                </span>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-block rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground capitalize">
-                  {music.type}
-                </span>
-                {music.genre && (
-                  <span className="inline-block rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground">
-                    {music.genre}
+            {/* Info — date pushed to bottom */}
+            <div className="flex-1 min-w-0 flex flex-col gap-2 p-5 sm:p-6 pr-12">
+              <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight line-clamp-2">
+                {music.title}
+              </h2>
+              <p className="text-base text-white/70 font-medium line-clamp-1">{music.artist}</p>
+
+              {/* Tags */}
+              {isEditing && isOwner ? (
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    className="px-3 py-1 bg-background/80 border border-white/20 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+                  >
+                    <option value="track">Track</option>
+                    <option value="album">Album</option>
+                    <option value="playlist">Playlist</option>
+                    <option value="podcast">Podcast</option>
+                  </select>
+                  <GenreSelect
+                    value={genre}
+                    onChange={(value) => setGenre(value)}
+                    placeholder="Genre (optional)"
+                    inputClassName="px-3 py-1 bg-background/80 border border-white/20 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+                    dropdownClassName="min-w-[200px]"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  <span className="inline-block rounded-full bg-white/10 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-white/90 capitalize">
+                    {music.type}
                   </span>
-                )}
-                {music.user?.name && (
-                  <span className="inline-block rounded-full bg-primary/20 px-3 py-1 text-sm font-medium text-primary">
-                    by {music.user.name}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+                  {music.genre && (
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${getGenreColor(music.genre)}`}>
+                      {music.genre}
+                    </span>
+                  )}
+                  {music.user?.name && (
+                    <span className="inline-block rounded-full bg-primary/30 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-white/90">
+                      by {music.user.name}
+                    </span>
+                  )}
+                </div>
+              )}
 
-          {/* Description */}
-          <div className="mb-6">
-            <h3 className="text-sm font-medium mb-2 text-muted-foreground">Description</h3>
-            {isEditing && isOwner ? (
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                placeholder="Add a description..."
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              />
-            ) : (
-              <p className="text-foreground italic">
-                {music.description || "No description provided"}
-              </p>
-            )}
-          </div>
-
-          {/* Date and Likes */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>
-                Added {new Date(music.dateAdded).toLocaleDateString("en-US", {
+              {/* Date pushed to bottom */}
+              <p className="mt-auto pt-3 text-xs text-white/40">
+                {new Date(music.dateAdded).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
                 })}
-              </span>
+              </p>
             </div>
-            
-            {/* Like button */}
-            {user && (
-              <button
-                onClick={handleLike}
-                disabled={isLiking}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  liked
-                    ? "bg-pink-500/20 text-pink-500 hover:bg-pink-500/30"
-                    : "bg-secondary hover:bg-accent"
-                } ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-              >
-                <Heart
-                  className={`h-5 w-5 transition-all ${liked ? "fill-pink-500" : ""} ${isLiking ? "animate-pulse" : ""}`}
-                />
-                <span className="font-medium">{likeCount}</span>
-              </button>
-            )}
           </div>
+        </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-              {error}
+        {/* ── BODY: scrollable ── */}
+        <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
+
+          {/* Description — only shown if exists or editing */}
+          {(music.description || (isEditing && isOwner)) && (
+            <div className="px-5 sm:px-6 pt-5">
+              {isEditing && isOwner ? (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Description</p>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    placeholder="Add a description..."
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    If genre not listed, choose "Other" and note it here.
+                  </p>
+                </div>
+              ) : (
+                music.description && (
+                  <p className="text-sm text-muted-foreground italic leading-relaxed">
+                    "{music.description}"
+                  </p>
+                )
+              )}
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <a
-              href={music.spotifyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open in {getPlatformLabel(getPlatformFromUrl(music.spotifyUrl))}
-            </a>
+          <div className="px-5 sm:px-6 pt-4 pb-2">
+            {error && (
+              <div className="mb-3 p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>
+            )}
 
-            {isOwner && (
-              <>
-                {isEditing ? (
-                  <>
+            {isEditing && isOwner ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setDescription(music.description || "");
+                    setType(music.type);
+                    setGenre(music.genre || "");
+                    setError("");
+                  }}
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdate}
+                  disabled={loading}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {loading ? "Saving..." : "Save"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <a
+                    href={music.spotifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap hover:text-white hover:font-bold ${platformHoverClass}`}
+                  >
+                    <ExternalLink className="h-4 w-4 shrink-0" />
+                    Open in {platformLabel}
+                  </a>
+
+                  {user && (
                     <button
-                      onClick={() => {
-                        setIsEditing(false);
-                        setDescription(music.description || "");
-                        setType(music.type);
-                        setGenre(music.genre || "");
-                      }}
-                      className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md font-medium hover:bg-secondary/80 transition-colors"
+                      onClick={handleLike}
+                      disabled={isLiking}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                        liked
+                          ? "bg-pink-500/20 text-pink-500 hover:bg-pink-500/30"
+                          : "bg-secondary text-secondary-foreground hover:bg-accent"
+                      }`}
                     >
-                      Cancel
+                      <Heart className={`h-4 w-4 transition-all ${liked ? "fill-pink-500" : ""} ${isLiking ? "animate-pulse" : ""}`} />
+                      <span>{likeCount}</span>
                     </button>
-                    <button
-                      onClick={handleUpdate}
-                      disabled={loading}
-                      className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                    >
-                      {loading ? "Saving..." : "Save"}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="p-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
-                      title="Edit"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </button>
-                    <div className="relative">
+                  )}
+
+                  {isOwner && (
+                    <>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="p-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+
                       <button
                         onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
                         disabled={loading}
                         className="p-2 bg-destructive/10 text-destructive rounded-md hover:bg-destructive/20 transition-colors disabled:opacity-50"
                         title="Delete"
                       >
-                        <Trash2 className="h-5 w-5" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
-                      
-                      {/* Delete Confirmation Popup */}
-                      {showDeleteConfirm && (
-                        <div className="absolute bottom-full right-0 mb-2 p-3 bg-card border border-border rounded-lg shadow-xl z-10 w-64">
-                          <p className="text-sm mb-3">Delete this music? This cannot be undone.</p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setShowDeleteConfirm(false)}
-                              className="flex-1 px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={handleDelete}
-                              disabled={loading}
-                              className="flex-1 px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors disabled:opacity-50"
-                            >
-                              {loading ? "Deleting..." : "Delete"}
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Delete confirmation — inline below buttons, never hidden behind gradient */}
+                {showDeleteConfirm && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+                    <p className="text-sm mb-3 text-foreground">Delete this music? This cannot be undone.</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        className="flex-1 px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        disabled={loading}
+                        className="flex-1 px-3 py-1.5 text-sm bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors disabled:opacity-50"
+                      >
+                        {loading ? "Deleting..." : "Delete"}
+                      </button>
                     </div>
-                  </>
+                  </div>
                 )}
-              </>
+              </div>
             )}
           </div>
+
+          {/* Comments */}
+          <div className="px-5 sm:px-6 pb-5 pt-3 flex flex-col gap-3">
+            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <MessageCircle className="h-4 w-4" />
+              Comments ({comments.length})
+            </h3>
+
+            <div className="border border-border rounded-lg bg-background/40 overflow-hidden flex flex-col">
+              <div className="overflow-y-auto max-h-52 p-3 space-y-2">
+                {commentsLoading ? (
+                  <p className="text-sm text-muted-foreground py-2">Loading...</p>
+                ) : comments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic py-2">No comments yet. Be the first!</p>
+                ) : (
+                  <>
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="flex gap-2 group/comment">
+                        <div className="flex-1 bg-secondary/40 rounded-lg px-3 py-2">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-medium">
+                              {comment.user.name || comment.user.email.split("@")[0]}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(comment.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                          <p className="text-sm">{comment.body}</p>
+                          {/* Inline delete confirmation */}
+                          {commentToDelete === comment.id && (
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                              <span className="text-xs text-muted-foreground flex-1">Delete this comment?</span>
+                              <button
+                                onClick={() => setCommentToDelete(null)}
+                                className="px-2 py-0.5 text-xs bg-secondary rounded hover:bg-secondary/80 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="px-2 py-0.5 text-xs bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {user && user.id === comment.userId && commentToDelete !== comment.id && (
+                          <button
+                            onClick={() => setCommentToDelete(comment.id)}
+                            className="opacity-0 group-hover/comment:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-all self-start mt-0.5"
+                            title="Delete comment"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <div ref={commentsEndRef} />
+                  </>
+                )}
+              </div>
+
+              {user && (
+                <form onSubmit={handleSubmitComment} className="flex gap-2 p-2 border-t border-border bg-background/60">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    maxLength={500}
+                    className="flex-1 px-3 py-1.5 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newComment.trim() || isSubmittingComment}
+                    className="p-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

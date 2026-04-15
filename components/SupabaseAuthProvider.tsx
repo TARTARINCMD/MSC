@@ -44,6 +44,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
+    window.location.href = "/";
   }, [supabase]);
 
   const value = useMemo(

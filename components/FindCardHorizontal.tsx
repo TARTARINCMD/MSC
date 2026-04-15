@@ -3,17 +3,18 @@
 import { useState, useEffect, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
-import { Heart } from "lucide-react";
+import { Heart, MessageCircle } from "lucide-react";
+import { getGenreColor } from "@/lib/genres";
 import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
 import { apiFetch } from "@/lib/api-fetch";
 import Image from "next/image";
 
 interface FindCardHorizontalProps {
-  find: SpotifyFind & { likeCount?: number; liked?: boolean };
+  find: SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number };
   onTypeClick?: (type: string) => void;
   onGenreClick?: (genre: string) => void;
   onLikeUpdate?: (findId: string, liked: boolean, likeCount: number) => void;
-  onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean }) => void;
+  onCardClick?: (find: SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number }) => void;
 }
 
 function FindCardHorizontal({
@@ -28,7 +29,6 @@ function FindCardHorizontal({
   const [liked, setLiked] = useState(find.liked || false);
   const [likeCount, setLikeCount] = useState(find.likeCount || 0);
   const [isLiking, setIsLiking] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     if (find.imageUrl) {
@@ -107,9 +107,7 @@ function FindCardHorizontal({
     if (!user || isLiking) return;
 
     setIsLiking(true);
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 300);
-    
+
     try {
       const response = await apiFetch(`/api/finds/${find.id}/like`, {
         method: "POST",
@@ -186,7 +184,7 @@ function FindCardHorizontal({
                     e.stopPropagation();
                     onGenreClick?.(find.genre!);
                   }}
-                  className="badge-click inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground cursor-pointer hover:opacity-80 transition-opacity"
+                  className={`badge-click inline-block rounded-full px-2 py-1 text-xs font-medium text-white cursor-pointer hover:opacity-80 transition-opacity ${getGenreColor(find.genre!)}`}
                 >
                   {find.genre}
                 </span>
@@ -197,20 +195,29 @@ function FindCardHorizontal({
                 </span>
               )}
             </div>
-            <button
-              onClick={handleLike}
-              disabled={!user || isLiking}
-              className={`shrink-0 flex items-center gap-1 transition-all ${
-                !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
-              } ${isAnimating ? "animate-bounce" : ""}`}
-            >
-              <Heart
-                className={`h-6 w-6 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-white hover:text-pink-400"} ${isAnimating ? "scale-125" : ""}`}
-              />
-              <span className={`text-base font-semibold transition-colors ${liked ? "text-pink-500" : "text-white"}`}>
-                {likeCount}
-              </span>
-            </button>
+            <div className="shrink-0 flex items-center gap-2">
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
+                className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
+              >
+                <MessageCircle className="h-6 w-6 text-white" />
+                <span className="text-base font-semibold text-white">{find.commentCount || 0}</span>
+              </button>
+              <button
+                onClick={handleLike}
+                disabled={!user || isLiking}
+                className={`flex items-center gap-1 transition-all ${
+                  !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
+                }`}
+              >
+                <Heart
+                  className={`h-6 w-6 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-white"}`}
+                />
+                <span className={`text-base font-semibold transition-colors ${liked ? "text-pink-500" : "text-white"}`}>
+                  {likeCount}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Title and Artist */}
@@ -232,7 +239,7 @@ function FindCardHorizontal({
 
           {/* Date */}
           <p className="text-sm text-muted-foreground">
-            Added on {new Date(find.dateAdded).toLocaleDateString("en-US", {
+            {new Date(find.dateAdded).toLocaleDateString("en-US", {
               year: "numeric",
               month: "long",
               day: "numeric",
