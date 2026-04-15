@@ -102,7 +102,7 @@ function FindCard({ find, onLikeUpdate, onCardClick }: FindCardProps) {
           <div className="absolute bottom-3 right-3 flex items-center gap-2">
             <button
               onClick={handleCommentClick}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-sm bg-background/60 transition-all ${
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800 transition-all ${
                 !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
               }`}
             >
@@ -112,7 +112,7 @@ function FindCard({ find, onLikeUpdate, onCardClick }: FindCardProps) {
             <button
               onClick={handleLike}
               disabled={!user || isLiking}
-              className={`relative flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-sm bg-background/60 transition-all ${
+              className={`relative flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800 transition-all ${
                 !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
               }`}
             >

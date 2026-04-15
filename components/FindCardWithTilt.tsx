@@ -170,8 +170,8 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
             className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
           >
-            <MessageCircle className="h-6 w-6 text-white drop-shadow" />
-            <span className="text-base font-semibold text-white drop-shadow">{find.commentCount || 0}</span>
+            <MessageCircle className="h-6 w-6 text-zinc-800 dark:text-white drop-shadow" />
+            <span className="text-base font-semibold text-zinc-800 dark:text-white drop-shadow">{find.commentCount || 0}</span>
           </button>
           <button
             onClick={handleLike}
@@ -181,9 +181,9 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
             } ${isAnimating ? "animate-bounce" : ""}`}
           >
             <Heart
-              className={`h-6 w-6 transition-all duration-200 drop-shadow ${liked ? "fill-pink-500 text-pink-500" : "text-white"} ${isAnimating ? "scale-125" : ""}`}
+              className={`h-6 w-6 transition-all duration-200 drop-shadow ${liked ? "fill-pink-500 text-pink-500" : "text-zinc-800 dark:text-white"} ${isAnimating ? "scale-125" : ""}`}
             />
-            <span className={`text-base font-semibold transition-colors drop-shadow ${liked ? "text-pink-500" : "text-white"}`}>{likeCount}</span>
+            <span className={`text-base font-semibold transition-colors drop-shadow ${liked ? "text-pink-500" : "text-zinc-800 dark:text-white"}`}>{likeCount}</span>
           </button>
         </div>
 

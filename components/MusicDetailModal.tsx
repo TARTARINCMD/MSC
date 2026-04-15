@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
-import { X, ExternalLink, Trash2, Edit, Heart, MessageCircle, Send } from "lucide-react";
+import { X, ExternalLink, Trash2, Edit, MessageCircle, Send } from "lucide-react";
 import GenreSelect from "@/components/GenreSelect";
 import { getPlatformFromUrl, getPlatformLabel } from "@/lib/streaming";
 import { getGenreColor } from "@/lib/genres";
@@ -47,7 +47,7 @@ interface MusicDetailModalProps {
   onLikeUpdate?: (findId: string, liked: boolean, likeCount: number) => void;
 }
 
-export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentChange, music, onLikeUpdate }: MusicDetailModalProps) {
+export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentChange, music }: MusicDetailModalProps) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -56,9 +56,6 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentC
   const [genre, setGenre] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
-  const [isLiking, setIsLiking] = useState(false);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -75,9 +72,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentC
       setDescription(music.description || "");
       setType(music.type);
       setGenre(music.genre || "");
-      setLiked(music.liked || false);
-      setLikeCount(music.likeCount || 0);
-      setIsEditing(false);
+setIsEditing(false);
       setShowDeleteConfirm(false);
       setError("");
       setComments([]);
@@ -151,23 +146,6 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentC
     platform === "youtube" || platform === "youtube_music" ? "hover:bg-red-600 hover:border-red-600" :
     "hover:bg-primary/90";
 
-  const handleLike = async () => {
-    if (!user || isLiking) return;
-    setIsLiking(true);
-    try {
-      const response = await apiFetch(`/api/finds/${music.id}/like`, { method: "POST" });
-      if (response.ok) {
-        const data = await response.json();
-        setLiked(data.liked);
-        setLikeCount(data.likeCount);
-        onLikeUpdate?.(music.id, data.liked, data.likeCount);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setIsLiking(false);
-    }
-  };
 
   const handleDelete = async () => {
     setLoading(true);
@@ -335,7 +313,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentC
           )}
 
           {/* Actions */}
-          <div className="px-5 sm:px-6 pt-4 pb-2">
+          <div className="px-5 sm:px-6 pt-4 pb-5">
             {error && (
               <div className="mb-3 p-3 bg-destructive/10 text-destructive rounded-md text-sm">{error}</div>
             )}
@@ -375,22 +353,7 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentC
                     Open in {platformLabel}
                   </a>
 
-                  {user && (
-                    <button
-                      onClick={handleLike}
-                      disabled={isLiking}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                        liked
-                          ? "bg-pink-500/20 text-pink-500 hover:bg-pink-500/30"
-                          : "bg-secondary text-secondary-foreground hover:bg-accent"
-                      }`}
-                    >
-                      <Heart className={`h-4 w-4 transition-all ${liked ? "fill-pink-500" : ""} ${isLiking ? "animate-pulse" : ""}`} />
-                      <span>{likeCount}</span>
-                    </button>
-                  )}
-
-                  {isOwner && (
+{isOwner && (
                     <>
                       <button
                         onClick={() => setIsEditing(true)}
@@ -437,8 +400,11 @@ export default function MusicDetailModal({ isOpen, onClose, onUpdate, onCommentC
             )}
           </div>
 
+          {/* Divider */}
+          <div className="mx-5 sm:mx-6 border-t border-border" />
+
           {/* Comments */}
-          <div className="px-5 sm:px-6 pb-5 pt-3 flex flex-col gap-3">
+          <div className="px-5 sm:px-6 pb-5 pt-5 flex flex-col gap-3">
             <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <MessageCircle className="h-4 w-4" />
               Comments ({comments.length})
