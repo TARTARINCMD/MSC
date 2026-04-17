@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import Link from "next/link";
 import Image from "next/image";
-import { X, Search } from "lucide-react";
+import { X, Search, Flame } from "lucide-react";
 import { useSidebar } from "@/components/SidebarContext";
 import { apiFetch } from "@/lib/api-fetch";
 import { getGenreColor } from "@/lib/genres";
@@ -52,8 +52,16 @@ export default function PeoplePage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const leaderboardLoaded = useRef(false);
-  // My Profile modal from leaderboard own-row click
   const [myProfileOpen, setMyProfileOpen] = useState(false);
+  const [selectedPersonXp, setSelectedPersonXp] = useState<{
+    level: number;
+    levelName: string;
+    currentStreak: number;
+    findsCount: number;
+    likesReceivedCount: number;
+    followersCount: number;
+    joinedAt: string | null;
+  } | null>(null);
 
   useEffect(() => {
     const fetchPeople = async () => {
@@ -88,10 +96,14 @@ export default function PeoplePage() {
     setSelectedPerson(person);
     setFindsLoading(true);
     setSelectedPersonFinds([]);
+    setSelectedPersonXp(null);
     try {
-      const response = await apiFetch(`/api/users/${person.id}/finds`);
-      if (!response.ok) { setSelectedPersonFinds([]); return; }
-      setSelectedPersonFinds(await response.json());
+      const [findsRes, xpRes] = await Promise.all([
+        apiFetch(`/api/users/${person.id}/finds`),
+        apiFetch(`/api/users/${person.id}/xp`),
+      ]);
+      setSelectedPersonFinds(findsRes.ok ? await findsRes.json() : []);
+      if (xpRes.ok) setSelectedPersonXp(await xpRes.json());
     } catch {
       setSelectedPersonFinds([]);
     } finally {
@@ -128,6 +140,7 @@ export default function PeoplePage() {
   const closeModal = () => {
     setSelectedPerson(null);
     setSelectedPersonFinds([]);
+    setSelectedPersonXp(null);
   };
 
   if (authLoading) {
@@ -412,6 +425,48 @@ export default function PeoplePage() {
                 </button>
               </div>
             </div>
+            {/* Stats panel */}
+            {selectedPersonXp && (
+              <div className="px-6 py-4 border-b border-border space-y-3 shrink-0">
+                {/* Stat pills */}
+                <div className="flex flex-wrap gap-2">
+                  {selectedPersonXp.joinedAt && (
+                    <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+                      <span className="text-muted-foreground">Joined </span>
+                      <span className="font-medium">{new Date(selectedPersonXp.joinedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+                    </div>
+                  )}
+                  <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+                    <span className="font-semibold">{selectedPersonXp.findsCount}</span>
+                    <span className="text-muted-foreground"> finds</span>
+                  </div>
+                  <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+                    <span className="font-semibold">{selectedPersonXp.likesReceivedCount}</span>
+                    <span className="text-muted-foreground"> likes received</span>
+                  </div>
+                  <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+                    <span className="font-semibold">{selectedPersonXp.followersCount}</span>
+                    <span className="text-muted-foreground"> followers</span>
+                  </div>
+                </div>
+                {/* Level + streak row */}
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                    {selectedPersonXp.level}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-sm">{selectedPersonXp.levelName}</span>
+                    {selectedPersonXp.currentStreak > 0 && (
+                      <span className="ml-3 inline-flex items-center gap-1 text-sm text-muted-foreground">
+                        <Flame className="h-4 w-4 text-orange-500" />
+                        {selectedPersonXp.currentStreak}-day streak
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="overflow-y-auto p-5">
               {findsLoading && (
                 <div className="py-12 text-center text-muted-foreground">Loading...</div>
