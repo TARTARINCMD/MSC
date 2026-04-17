@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
+import { handleFollowerGainedXp } from "@/lib/xp-server";
 
 export async function POST(
   request: Request,
@@ -55,6 +56,10 @@ export async function POST(
         },
       });
       isFollowing = true;
+
+      Promise.resolve()
+        .then(() => handleFollowerGainedXp(targetUserId, prisma))
+        .catch(console.error);
     }
 
     const followerCount = await prisma.follow.count({

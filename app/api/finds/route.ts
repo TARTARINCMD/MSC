@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractSpotifyId, getPlatformFromUrl } from "@/lib/streaming";
 import { getAuthUser } from "@/lib/auth-server";
+import { handlePostFindXp } from "@/lib/xp-server";
 
 export async function GET(request: Request) {
   try {
@@ -145,6 +146,10 @@ export async function POST(request: Request) {
         userId: user.id,
       },
     });
+
+    Promise.resolve()
+      .then(() => handlePostFindXp(user.id, prisma))
+      .catch(console.error);
 
     return NextResponse.json(find, { status: 201 });
   } catch (error) {

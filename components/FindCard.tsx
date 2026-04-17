@@ -46,7 +46,7 @@ function FindCard({ find, onLikeUpdate, onCardClick }: FindCardProps) {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - addedDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3;
+    return diffDays <= 1;
   })();
 
   const handleLike = async (e: React.MouseEvent) => {

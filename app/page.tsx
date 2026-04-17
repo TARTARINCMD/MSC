@@ -6,7 +6,8 @@ import { useSidebar } from "@/components/SidebarContext";
 import { type FindType } from "@/lib/data";
 import { GENRES, normalizeGenre } from "@/lib/genres";
 import FindList from "@/components/FindList";
-import FindListHorizontal from "@/components/FindListHorizontal";
+import FindCardSkeleton from "@/components/FindCardSkeleton";
+import FindListHorizontal, { FindListHorizontalSkeleton } from "@/components/FindListHorizontal";
 import TypeFilter from "@/components/TypeFilter";
 import GenreFilter from "@/components/GenreFilter";
 import DateSort from "@/components/DateSort";
@@ -81,6 +82,8 @@ export default function Home() {
       return;
     }
 
+    setLoading(true);
+    setError("");
     try {
       const response = await apiFetch(`/api/finds?scope=${viewMode}`);
       if (response.ok) {
@@ -167,7 +170,7 @@ export default function Home() {
         <main className="container mx-auto px-4 pt-4 pb-8">
           {/* Sticky Toolbar */}
           <div className={`sticky top-4 z-40 mb-6 transition-all duration-300 ${toolbarVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
-            <div id="toolbar" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg">
+            <div id="toolbar" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-xl border-0 bg-card/95 backdrop-blur-md shadow-lg">
               <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
                 {user && (
                   <div className="flex items-center bg-secondary/50 rounded-lg p-1">
@@ -218,11 +221,14 @@ export default function Home() {
             </div>
           </div>
 
-          {loading && (
-            <div className="text-center py-12 text-muted-foreground">
-              Loading music...
+          {loading && layout !== "tiles" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <FindCardSkeleton key={i} />
+              ))}
             </div>
           )}
+          {loading && layout === "tiles" && <FindListHorizontalSkeleton />}
 
           {error && (
             <div className="text-center py-12 text-destructive">

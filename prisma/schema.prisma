@@ -17,13 +17,15 @@ model User {
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   finds         SpotifyFind[]
   likes         Like[]
   comments      Comment[]
   followers     Follow[] @relation("UserFollowers")
   following     Follow[] @relation("UserFollowing")
   savedArticles SavedArticle[]
+  xp            UserXP?
+  xpEvents      XpEvent[]
 }
 
 model SpotifyFind {
@@ -117,4 +119,40 @@ model NewsArticle {
 
   @@index([fetchedAt])
   @@index([link])
+}
+
+enum XpEventType {
+  POST_FIND
+  LIKE_RECEIVED
+  FOLLOWER_GAINED
+  STREAK_BONUS
+  MILESTONE
+}
+
+model UserXP {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  totalXp          Int       @default(0)
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
+  lastActivityDate DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model XpEvent {
+  id        String      @id @default(cuid())
+  userId    String
+  eventType XpEventType
+  xpAmount  Int
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, eventType])
+  @@index([createdAt])
 }

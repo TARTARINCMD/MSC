@@ -97,7 +97,7 @@ function FindCardHorizontal({
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - addedDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3;
+    return diffDays <= 1;
   })();
 
   const handleLike = async (e: React.MouseEvent) => {
@@ -135,11 +135,11 @@ function FindCardHorizontal({
   };
 
   return (
-    <div
-      onClick={handleCardClick}
-      className="group cursor-pointer"
-    >
-      <div className="rounded-lg bg-card border border-border p-6 max-w-2xl mx-auto h-full flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 transition-colors duration-200 group-hover:bg-muted/50 hover:border-border/80">
+    <div className="flex justify-center">
+      <div
+        onClick={handleCardClick}
+        className="group cursor-pointer rounded-lg bg-card border-0 p-6 w-full max-w-2xl h-full flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 transition-all duration-200 hover:bg-muted hover:scale-[1.01] hover:shadow-lg"
+      >
         {/* Cover Image */}
         <div className="relative w-full h-48 sm:w-40 sm:h-40 md:w-48 md:h-48 shrink-0 rounded-lg overflow-hidden bg-muted">
           {imageUrl ? (
@@ -158,93 +158,72 @@ function FindCardHorizontal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 flex flex-col gap-2">
-          {/* Badges and Like Button */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-wrap gap-2">
-              {isNew && (
-                <span className="inline-block rounded-full bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-500 capitalize animate-pulse">
-                  New
-                </span>
-              )}
-              <span
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onTypeClick?.(find.type);
-                }}
-                className="badge-click inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground capitalize cursor-pointer hover:opacity-80 transition-opacity"
-              >
-                {find.type}
-              </span>
-              {find.genre && (
-                <span
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onGenreClick?.(find.genre!);
-                  }}
-                  className={`badge-click inline-block rounded-full px-2 py-1 text-xs font-medium text-white cursor-pointer hover:opacity-80 transition-opacity ${getGenreColor(find.genre!)}`}
-                >
-                  {find.genre}
-                </span>
-              )}
-              {find.user?.name && (
-                <span className="inline-block rounded-full bg-primary/20 px-2 py-1 text-xs font-medium text-primary capitalize flex items-center gap-1">
-                  <span className="opacity-70">by</span> {find.user.name}
-                </span>
-              )}
-            </div>
-            <div className="shrink-0 flex items-center gap-2">
-              <button
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
-                className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
-              >
-                <MessageCircle className="h-6 w-6 text-white" />
-                <span className="text-base font-semibold text-white">{find.commentCount || 0}</span>
-              </button>
-              <button
-                onClick={handleLike}
-                disabled={!user || isLiking}
-                className={`flex items-center gap-1 transition-all ${
-                  !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
-                }`}
-              >
-                <Heart
-                  className={`h-6 w-6 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-white"}`}
-                />
-                <span className={`text-base font-semibold transition-colors ${liked ? "text-pink-500" : "text-white"}`}>
-                  {likeCount}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Title and Artist */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
+          {/* Title + Artist */}
           <div className="min-w-0">
-            <h3 className="text-xl md:text-2xl font-semibold text-card-foreground line-clamp-1 mb-2">
+            <h3 className="text-xl md:text-2xl font-semibold text-card-foreground line-clamp-1">
               {find.title}
             </h3>
-            <p className="text-base md:text-lg font-medium text-muted-foreground line-clamp-1">
+            <p className="text-base font-medium text-muted-foreground line-clamp-1">
               {find.artist}
             </p>
           </div>
 
-          {/* Description */}
+          {/* Badges */}
+          <div className="flex flex-wrap gap-1.5">
+            {isNew && (
+              <span className="inline-block rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-500 capitalize animate-pulse">
+                New
+              </span>
+            )}
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTypeClick?.(find.type); }}
+              className="badge-click inline-block rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground capitalize cursor-pointer hover:opacity-80 transition-opacity"
+            >
+              {find.type}
+            </span>
+            {find.genre && (
+              <span
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onGenreClick?.(find.genre!); }}
+                className={`badge-click inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white cursor-pointer hover:opacity-80 transition-opacity ${getGenreColor(find.genre!)}`}
+              >
+                {find.genre}
+              </span>
+            )}
+            {find.user?.name && (
+              <span className="inline-block rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                by {find.user.name}
+              </span>
+            )}
+          </div>
+
           {find.description && (
-            <p className="text-base text-muted-foreground line-clamp-3 italic">
-              {find.description}
-            </p>
+            <p className="text-sm text-muted-foreground line-clamp-2 italic">{find.description}</p>
           )}
 
-          {/* Date */}
-          <p className="text-sm text-muted-foreground">
-            {new Date(find.dateAdded).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+          {/* Date + actions */}
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-xs text-muted-foreground">
+              {new Date(find.dateAdded).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            </p>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
+                className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
+              >
+                <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">{find.commentCount || 0}</span>
+              </button>
+              <button
+                onClick={handleLike}
+                disabled={!user || isLiking}
+                className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
+              >
+                <Heart className={`h-5 w-5 transition-all duration-200 ${liked ? "fill-pink-500 text-pink-500" : "text-muted-foreground"}`} />
+                <span className={`text-sm font-medium transition-colors ${liked ? "text-pink-500" : "text-muted-foreground"}`}>{likeCount}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

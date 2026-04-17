@@ -102,7 +102,7 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - addedDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3;
+    return diffDays <= 1;
   })();
 
   const handleLike = async (e: React.MouseEvent) => {
@@ -147,7 +147,7 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
       onClick={handleCardClick}
       className="block w-full h-full group cursor-pointer"
     >
-      <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-colors duration-200 group-hover:bg-muted relative">
+      <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-all duration-200 group-hover:bg-muted group-hover:scale-[1.02] group-hover:shadow-lg relative">
         {/* TiltedCard first so buttons render on top */}
         <TiltedCard
           imageSrc={imageUrl}

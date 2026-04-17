@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-server";
+import { handleLikeReceivedXp } from "@/lib/xp-server";
 
 export async function POST(
   request: Request,
@@ -53,6 +54,10 @@ export async function POST(
           findId: findId,
         },
       });
+
+      Promise.resolve()
+        .then(() => handleLikeReceivedXp(find.userId, prisma))
+        .catch(console.error);
 
       const likeCount = await prisma.like.count({
         where: { findId: findId },

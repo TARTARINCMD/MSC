@@ -83,7 +83,7 @@ function NewsCard({
 
   return (
     <div
-      className={`group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-muted/30 hover:border-black dark:hover:border-white/60 ${
+      className={`group flex items-center gap-3 rounded-lg px-2 py-2 transition-all hover:bg-muted hover:scale-[1.01] hover:shadow-sm ${
         fresh
           ? "border-l-2 border-l-primary bg-primary/5 border-t border-r border-b border-transparent"
           : "border border-transparent"
@@ -137,7 +137,7 @@ function SavedCard({
   highlightTerms: HighlightTerm[];
 }) {
   return (
-    <div className="group flex items-center gap-3 rounded-lg px-2 py-2 border border-transparent hover:bg-muted/30 hover:border-black dark:hover:border-white/60 transition-colors">
+    <div className="group flex items-center gap-3 rounded-lg px-2 py-2 border-0 transition-all hover:bg-muted hover:scale-[1.01] hover:shadow-sm">
       {/* Main content */}
       <a
         href={article.link}
@@ -373,14 +373,25 @@ export default function NewsPage() {
 
           {/* Loading skeleton */}
           {loading && (
-            <div className="space-y-1">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-2 py-2 animate-pulse">
-                  <div className="flex-1 min-w-0">
-                    <div className="h-3 bg-muted rounded w-5/6 mb-1.5" />
-                    <div className="h-2.5 bg-muted rounded w-2/5" />
+            <div className="space-y-6">
+              {Array.from({ length: 3 }).map((_, groupIdx) => (
+                <div key={groupIdx} className="grid grid-cols-[7rem_1fr] gap-x-4">
+                  {/* Bucket label */}
+                  <div className="pt-2">
+                    <div className="h-3 skeleton rounded w-4/5" />
                   </div>
-                  <div className="h-5 w-5 bg-muted rounded flex-shrink-0" />
+                  {/* Articles */}
+                  <div className="space-y-0.5 border-l border-border pl-4">
+                    {Array.from({ length: groupIdx === 0 ? 4 : 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-3 px-2 py-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="h-4 skeleton rounded w-5/6 mb-1.5" />
+                          <div className="h-3 skeleton rounded w-2/5" />
+                        </div>
+                        <div className="h-5 w-5 skeleton rounded flex-shrink-0" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

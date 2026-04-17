@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { X } from "lucide-react";
+import { X, Flame } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
 import { getGenreColor } from "@/lib/genres";
 
@@ -16,40 +16,84 @@ interface UserFind {
   imageUrl: string | null;
 }
 
+interface XpProfile {
+  totalXp: number;
+  level: number;
+  levelName: string;
+  progressPercent: number;
+  xpIntoLevel: number;
+  xpNeededForNext: number;
+  nextLevelName: string | null;
+  currentStreak: number;
+  longestStreak: number;
+  findsCount: number;
+  likesReceivedCount: number;
+  followersCount: number;
+  joinedAt: string | null;
+}
+
 interface UserProfileModalProps {
   userId: string;
   userName: string | null;
+  isOwnProfile?: boolean;
   onClose: () => void;
 }
 
-export default function UserProfileModal({ userId, userName, onClose }: UserProfileModalProps) {
+export default function UserProfileModal({
+  userId,
+  userName,
+  isOwnProfile = false,
+  onClose,
+}: UserProfileModalProps) {
   const [finds, setFinds] = useState<UserFind[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [findsLoading, setFindsLoading] = useState(true);
+  const [xpProfile, setXpProfile] = useState<XpProfile | null>(null);
 
   useEffect(() => {
-    // Load finds + follow status in parallel
+    const xpEndpoint = isOwnProfile ? "/api/users/me/xp" : `/api/users/${userId}/xp`;
+
     Promise.all([
-      apiFetch(`/api/users/${userId}/finds`).then((r) => r.ok ? r.json() : []),
-      apiFetch("/api/users").then((r) => r.ok ? r.json() : []),
-    ]).then(([userFinds, allUsers]) => {
+      apiFetch(`/api/users/${userId}/finds`).then((r) => (r.ok ? r.json() : [])),
+      isOwnProfile
+        ? Promise.resolve(null)
+        : apiFetch("/api/users").then((r) => (r.ok ? r.json() : [])),
+      apiFetch(xpEndpoint).then((r) => (r.ok ? r.json() : null)),
+    ]).then(([userFinds, allUsers, xpData]) => {
       setFinds(userFinds);
-      const match = allUsers.find((u: { id: string; isFollowing: boolean }) => u.id === userId);
-      if (match) setIsFollowing(match.isFollowing);
+      if (!isOwnProfile && allUsers) {
+        const match = allUsers.find(
+          (u: { id: string; isFollowing: boolean }) => u.id === userId
+        );
+        if (match) setIsFollowing(match.isFollowing);
+      }
+      if (xpData) setXpProfile(xpData);
     }).finally(() => setFindsLoading(false));
-  }, [userId]);
+  }, [userId, isOwnProfile]);
 
   const toggleFollow = () => {
     setIsFollowing((prev) => !prev);
-    apiFetch(`/api/users/${userId}/follow`, { method: "POST" }).then((res) => {
-      if (!res.ok) setIsFollowing((prev) => !prev); // revert
-    }).catch(() => setIsFollowing((prev) => !prev));
+    apiFetch(`/api/users/${userId}/follow`, { method: "POST" })
+      .then((res) => {
+        if (!res.ok) setIsFollowing((prev) => !prev);
+      })
+      .catch(() => setIsFollowing((prev) => !prev));
+  };
+
+  const formatJoinDate = (isoDate: string | null) => {
+    if (!isoDate) return null;
+    return new Date(isoDate).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
   };
 
   return (
     <div
       className="fixed inset-0 z-[300] flex items-center justify-center p-4 backdrop-blur-sm bg-black/50"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
         {/* Header */}
@@ -66,23 +110,103 @@ export default function UserProfileModal({ userId, userName, onClose }: UserProf
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!isOwnProfile && (
+              <button
+                onClick={toggleFollow}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  isFollowing
+                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                }`}
+              >
+                {isFollowing ? "Unfollow" : "Follow"}
+              </button>
+            )}
             <button
-              onClick={toggleFollow}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                isFollowing
-                  ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              }`}
+              onClick={onClose}
+              className="p-1.5 rounded-lg hover:bg-accent transition-colors"
             >
-              {isFollowing ? "Unfollow" : "Follow"}
-            </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
               <X className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        {/* Content */}
+        {/* Stats + XP panel */}
+        {xpProfile && (
+          <div className="px-6 py-4 border-b border-border space-y-4 shrink-0">
+            {/* Stat pills row */}
+            <div className="flex flex-wrap gap-2">
+              {xpProfile.joinedAt && (
+                <div className="bg-muted rounded-lg px-3 py-2 text-center text-sm">
+                  <span className="text-muted-foreground">Joined </span>
+                  <span className="font-medium">{formatJoinDate(xpProfile.joinedAt)}</span>
+                </div>
+              )}
+              <div className="bg-muted rounded-lg px-3 py-2 text-center text-sm">
+                <span className="font-semibold">{xpProfile.findsCount}</span>
+                <span className="text-muted-foreground"> finds</span>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2 text-center text-sm">
+                <span className="font-semibold">{xpProfile.likesReceivedCount}</span>
+                <span className="text-muted-foreground"> likes received</span>
+              </div>
+              <div className="bg-muted rounded-lg px-3 py-2 text-center text-sm">
+                <span className="font-semibold">{xpProfile.followersCount}</span>
+                <span className="text-muted-foreground"> followers</span>
+              </div>
+            </div>
+
+            {/* XP panel — own profile only */}
+            {isOwnProfile && (
+              <div className="space-y-3">
+                {/* Level + streak row */}
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
+                    {xpProfile.level}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm">{xpProfile.levelName}</span>
+                      {xpProfile.currentStreak > 0 && (
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground shrink-0">
+                          <Flame className="h-4 w-4 text-orange-500" />
+                          {xpProfile.currentStreak}-day streak
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {xpProfile.totalXp.toLocaleString()} total XP
+                    </p>
+                  </div>
+                </div>
+
+                {/* XP progress bar */}
+                <div className="space-y-1">
+                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-2.5 bg-green-500 rounded-full transition-all duration-500"
+                      style={{ width: `${xpProfile.progressPercent}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>
+                      {xpProfile.xpIntoLevel.toLocaleString()} /{" "}
+                      {xpProfile.xpNeededForNext > 0
+                        ? xpProfile.xpNeededForNext.toLocaleString()
+                        : "MAX"}{" "}
+                      XP
+                    </span>
+                    {xpProfile.nextLevelName && (
+                      <span>Next: {xpProfile.nextLevelName}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Finds grid */}
         <div className="overflow-y-auto p-5">
           {findsLoading && (
             <div className="py-12 text-center text-muted-foreground">Loading...</div>
@@ -117,7 +241,9 @@ export default function UserProfileModal({ userId, userName, onClose }: UserProf
                   </div>
                   <div className="p-2.5">
                     {find.genre && (
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white mb-1.5 ${getGenreColor(find.genre)}`}>
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white mb-1.5 ${getGenreColor(find.genre)}`}
+                      >
                         {find.genre}
                       </span>
                     )}
