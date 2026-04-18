@@ -12,9 +12,6 @@ export async function GET() {
     }
 
     const users = await prisma.user.findMany({
-      where: {
-        id: { not: currentUserId },
-      },
       orderBy: {
         createdAt: "desc",
       },
@@ -22,8 +19,10 @@ export async function GET() {
         id: true,
         name: true,
         followers: {
-          where: { followerId: currentUserId },
-          select: { id: true },
+          select: { followerId: true },
+        },
+        following: {
+          select: { followingId: true },
         },
         finds: {
           select: { genre: true },
@@ -32,7 +31,6 @@ export async function GET() {
     });
 
     const formattedUsers = users.map((user) => {
-      // Count genre occurrences and pick top 3
       const genreCounts: Record<string, number> = {};
       for (const find of user.finds) {
         if (find.genre) {
@@ -47,7 +45,10 @@ export async function GET() {
       return {
         id: user.id,
         name: user.name,
-        isFollowing: user.followers.length > 0,
+        isOwnProfile: user.id === currentUserId,
+        isFollowing: user.followers.some((f) => f.followerId === currentUserId),
+        followersCount: user.followers.length,
+        followingCount: user.following.length,
         topGenres,
         findCount: user.finds.length,
       };

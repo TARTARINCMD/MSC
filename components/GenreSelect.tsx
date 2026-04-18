@@ -10,6 +10,7 @@ interface GenreSelectProps {
   placeholder?: string;
   inputClassName?: string;
   dropdownClassName?: string;
+  options?: readonly string[];
 }
 
 export default function GenreSelect({
@@ -18,6 +19,7 @@ export default function GenreSelect({
   placeholder = "Select a genre",
   inputClassName = "",
   dropdownClassName = "",
+  options = GENRES,
 }: GenreSelectProps) {
   const [search, setSearch] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -42,9 +44,9 @@ export default function GenreSelect({
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return GENRES;
-    return GENRES.filter((genre) => genre.toLowerCase().includes(query));
-  }, [search]);
+    if (!query) return options;
+    return options.filter((genre) => genre.toLowerCase().includes(query));
+  }, [search, options]);
 
   const displayValue = isOpen ? search : value;
 

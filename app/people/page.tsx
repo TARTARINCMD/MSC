@@ -4,18 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import Link from "next/link";
 import Image from "next/image";
-import { X, Search, Flame } from "lucide-react";
+import { X, Search, Flame, ChevronRight } from "lucide-react";
 import { useSidebar } from "@/components/SidebarContext";
 import { apiFetch } from "@/lib/api-fetch";
+import { fetchSWR, getCached, prefetch } from "@/lib/cache";
 import { getGenreColor } from "@/lib/genres";
 import UserProfileModal from "@/components/UserProfileModal";
 
 interface Person {
   id: string;
   name: string | null;
+  isOwnProfile: boolean;
   isFollowing: boolean;
+  followersCount: number;
+  followingCount: number;
   topGenres: string[];
   findCount: number;
+}
+
+interface FollowUser {
+  id: string;
+  name: string | null;
+  isOwnProfile: boolean;
+  isFollowing: boolean;
 }
 
 interface UserFind {
@@ -53,6 +64,13 @@ export default function PeoplePage() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const leaderboardLoaded = useRef(false);
   const [myProfileOpen, setMyProfileOpen] = useState(false);
+  const [followListModal, setFollowListModal] = useState<{
+    userId: string;
+    userName: string | null;
+    type: "followers" | "following";
+    users: FollowUser[];
+    loading: boolean;
+  } | null>(null);
   const [selectedPersonXp, setSelectedPersonXp] = useState<{
     level: number;
     levelName: string;
@@ -64,51 +82,92 @@ export default function PeoplePage() {
   } | null>(null);
 
   useEffect(() => {
-    const fetchPeople = async () => {
-      if (!user) { setLoading(false); return; }
-      try {
-        setLoading(true);
+    if (!user) { setLoading(false); return; }
+    setLoading(!getCached("people"));
+    fetchSWR<Person[]>(
+      "people",
+      async () => {
+        const res = await apiFetch("/api/users");
+        if (!res.ok) throw new Error("Failed to load people");
+        return res.json();
+      },
+      (data, isBackground) => {
+        setPeople(data);
+        if (!isBackground) setLoading(false);
         setError("");
-        const response = await apiFetch("/api/users");
-        if (!response.ok) { setError("Failed to load people"); return; }
-        setPeople(await response.json());
-      } catch {
-        setError("Failed to load people");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPeople();
+        // Background prefetch every person's details with a small stagger
+        // so opening any card is instant
+        data.forEach((person, i) => {
+          setTimeout(() => {
+            prefetch(`user-finds:${person.id}`, async () => {
+              const r = await apiFetch(`/api/users/${person.id}/finds`);
+              return r.ok ? r.json() : [];
+            });
+            prefetch(`user-xp:${person.id}`, async () => {
+              const r = await apiFetch(`/api/users/${person.id}/xp`);
+              return r.ok ? r.json() : null;
+            });
+            prefetch(`user-followers:${person.id}`, async () => {
+              const r = await apiFetch(`/api/users/${person.id}/followers`);
+              return r.ok ? r.json() : [];
+            });
+            prefetch(`user-following:${person.id}`, async () => {
+              const r = await apiFetch(`/api/users/${person.id}/following`);
+              return r.ok ? r.json() : [];
+            });
+          }, i * 150); // stagger 150ms per person to avoid burst
+        });
+      },
+      () => { setError("Failed to load people"); setLoading(false); },
+    );
   }, [user]);
 
   useEffect(() => {
     if (activeTab !== "leaderboard" || leaderboardLoaded.current) return;
     leaderboardLoaded.current = true;
-    setLeaderboardLoading(true);
-    apiFetch("/api/xp/leaderboard")
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setLeaderboard)
-      .catch(() => {})
-      .finally(() => setLeaderboardLoading(false));
+    setLeaderboardLoading(!getCached("leaderboard"));
+    fetchSWR<LeaderboardEntry[]>(
+      "leaderboard",
+      async () => {
+        const r = await apiFetch("/api/xp/leaderboard");
+        return r.ok ? r.json() : [];
+      },
+      (data, isBackground) => {
+        setLeaderboard(data);
+        if (!isBackground) setLeaderboardLoading(false);
+      },
+      () => setLeaderboardLoading(false),
+    );
   }, [activeTab]);
 
   const openPersonPosts = async (person: Person) => {
     setSelectedPerson(person);
-    setFindsLoading(true);
-    setSelectedPersonFinds([]);
     setSelectedPersonXp(null);
-    try {
-      const [findsRes, xpRes] = await Promise.all([
-        apiFetch(`/api/users/${person.id}/finds`),
-        apiFetch(`/api/users/${person.id}/xp`),
-      ]);
-      setSelectedPersonFinds(findsRes.ok ? await findsRes.json() : []);
-      if (xpRes.ok) setSelectedPersonXp(await xpRes.json());
-    } catch {
-      setSelectedPersonFinds([]);
-    } finally {
-      setFindsLoading(false);
-    }
+    setFindsLoading(!getCached(`user-finds:${person.id}`));
+
+    await Promise.all([
+      fetchSWR<UserFind[]>(
+        `user-finds:${person.id}`,
+        async () => {
+          const r = await apiFetch(`/api/users/${person.id}/finds`);
+          return r.ok ? r.json() : [];
+        },
+        (data, isBackground) => {
+          setSelectedPersonFinds(data);
+          if (!isBackground) setFindsLoading(false);
+        },
+        () => setFindsLoading(false),
+      ),
+      fetchSWR(
+        `user-xp:${person.id}`,
+        async () => {
+          const r = await apiFetch(`/api/users/${person.id}/xp`);
+          return r.ok ? r.json() : null;
+        },
+        (data) => { if (data) setSelectedPersonXp(data as typeof selectedPersonXp); },
+        () => {},
+      ),
+    ]);
   };
 
   const toggleFollow = (userId: string, currentlyFollowing: boolean) => {
@@ -143,6 +202,38 @@ export default function PeoplePage() {
     setSelectedPersonXp(null);
   };
 
+  const openFollowList = async (userId: string, userName: string | null, type: "followers" | "following") => {
+    const cacheKey = `user-${type}:${userId}`;
+    const hasCached = !!getCached(cacheKey);
+    setFollowListModal({ userId, userName, type, users: [], loading: !hasCached });
+    await fetchSWR<FollowUser[]>(
+      cacheKey,
+      async () => {
+        const r = await apiFetch(`/api/users/${userId}/${type}`);
+        return r.ok ? r.json() : [];
+      },
+      (users, isBackground) => {
+        setFollowListModal((prev) => prev ? { ...prev, users, loading: isBackground ? false : false } : null);
+      },
+      () => setFollowListModal((prev) => prev ? { ...prev, loading: false } : null),
+    );
+  };
+
+  const toggleFollowInList = (targetId: string, currentlyFollowing: boolean) => {
+    setFollowListModal((prev) =>
+      prev
+        ? { ...prev, users: prev.users.map((u) => u.id === targetId ? { ...u, isFollowing: !currentlyFollowing } : u) }
+        : null
+    );
+    apiFetch(`/api/users/${targetId}/follow`, { method: "POST" }).catch(() => {
+      setFollowListModal((prev) =>
+        prev
+          ? { ...prev, users: prev.users.map((u) => u.id === targetId ? { ...u, isFollowing: currentlyFollowing } : u) }
+          : null
+      );
+    });
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
@@ -170,7 +261,7 @@ export default function PeoplePage() {
 
   return (
     <div className="min-h-screen">
-      <div className={`transition-all duration-300 ${sidebarOpen ? "blur-sm" : ""}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen ? "md:blur-sm" : ""}`}>
         <div className="container mx-auto px-4 py-8">
           {/* Page header */}
           <div className="flex items-center justify-between gap-4 mb-6">
@@ -257,17 +348,22 @@ export default function PeoplePage() {
                     {filtered.map((person) => (
                       <button
                         key={person.id}
-                        onClick={() => openPersonPosts(person)}
+                        onClick={() => person.isOwnProfile ? setMyProfileOpen(true) : openPersonPosts(person)}
                         className="group text-left rounded-2xl border-0 bg-card p-5 hover:bg-muted hover:shadow-lg hover:scale-[1.02] transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 duration-500"
                       >
-                        <div className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-3 mb-3">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
                             {(person.name || "?")[0].toUpperCase()}
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-base truncate">{person.name || "Unnamed User"}</p>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-semibold text-base truncate">{person.name || "Unnamed User"}</p>
+                              {person.isOwnProfile && (
+                                <span className="shrink-0 text-xs bg-primary/15 text-primary rounded-full px-2 py-0.5 font-medium">you</span>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
-                              {person.findCount} {person.findCount === 1 ? "find" : "finds"}
+                              {person.findCount} {person.findCount === 1 ? "find" : "finds"} · {person.followersCount} {person.followersCount === 1 ? "follower" : "followers"}
                             </p>
                           </div>
                         </div>
@@ -340,7 +436,10 @@ export default function PeoplePage() {
                               openPersonPosts({
                                 id: entry.userId,
                                 name: entry.name,
+                                isOwnProfile: false,
                                 isFollowing: false,
+                                followersCount: 0,
+                                followingCount: 0,
                                 topGenres: [],
                                 findCount: 0,
                               });
@@ -410,16 +509,18 @@ export default function PeoplePage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleFollow(selectedPerson.id, selectedPerson.isFollowing)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    selectedPerson.isFollowing
-                      ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90"
-                  }`}
-                >
-                  {selectedPerson.isFollowing ? "Unfollow" : "Follow"}
-                </button>
+                {!selectedPerson.isOwnProfile && (
+                  <button
+                    onClick={() => toggleFollow(selectedPerson.id, selectedPerson.isFollowing)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      selectedPerson.isFollowing
+                        ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                        : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    }`}
+                  >
+                    {selectedPerson.isFollowing ? "Unfollow" : "Follow"}
+                  </button>
+                )}
                 <button onClick={closeModal} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
                   <X className="h-5 w-5" />
                 </button>
@@ -444,10 +545,24 @@ export default function PeoplePage() {
                     <span className="font-semibold">{selectedPersonXp.likesReceivedCount}</span>
                     <span className="text-muted-foreground"> likes received</span>
                   </div>
-                  <div className="bg-muted rounded-lg px-3 py-2 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => openFollowList(selectedPerson.id, selectedPerson.name, "followers")}
+                    className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                  >
                     <span className="font-semibold">{selectedPersonXp.followersCount}</span>
-                    <span className="text-muted-foreground"> followers</span>
-                  </div>
+                    <span className="text-muted-foreground">followers</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openFollowList(selectedPerson.id, selectedPerson.name, "following")}
+                    className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+                  >
+                    <span className="font-semibold">{selectedPerson.followingCount}</span>
+                    <span className="text-muted-foreground">following</span>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
                 </div>
                 {/* Level + streak row */}
                 <div className="flex items-center gap-3">
@@ -525,6 +640,61 @@ export default function PeoplePage() {
           isOwnProfile={true}
           onClose={() => setMyProfileOpen(false)}
         />
+      )}
+
+      {/* Followers / Following list modal */}
+      {followListModal && (
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setFollowListModal(null); }}
+        >
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm max-h-[60vh] flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+              <h3 className="font-semibold text-base">
+                {followListModal.type === "followers"
+                  ? `${followListModal.userName ?? "User"}'s followers`
+                  : `${followListModal.userName ?? "User"} is following`}
+              </h3>
+              <button onClick={() => setFollowListModal(null)} aria-label="Close" className="p-1.5 rounded-lg hover:bg-accent transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 py-1">
+              {followListModal.loading && (
+                <div className="py-10 text-center text-muted-foreground text-sm">Loading…</div>
+              )}
+              {!followListModal.loading && followListModal.users.length === 0 && (
+                <div className="py-10 text-center text-muted-foreground text-sm">Nobody here yet.</div>
+              )}
+              {!followListModal.loading && followListModal.users.map((u) => (
+                <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted transition-colors">
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-foreground font-bold text-sm shrink-0">
+                    {(u.name || "?")[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {u.name || "Unnamed User"}
+                      {u.isOwnProfile && <span className="ml-1.5 text-xs text-muted-foreground font-normal">(you)</span>}
+                    </p>
+                  </div>
+                  {!u.isOwnProfile && (
+                    <button
+                      type="button"
+                      onClick={() => toggleFollowInList(u.id, u.isFollowing)}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                        u.isFollowing
+                          ? "border-border text-foreground hover:bg-muted"
+                          : "bg-foreground text-background border-transparent hover:opacity-90"
+                      }`}
+                    >
+                      {u.isFollowing ? "Unfollow" : "Follow"}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

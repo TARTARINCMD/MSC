@@ -18,6 +18,7 @@ import LayoutSelector from "@/components/LayoutSelector";
 import MasonryView from "@/components/MasonryView";
 import { Plus } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import { fetchSWR, invalidateCache, getCached } from "@/lib/cache";
 
 type LayoutType = "grid" | "compact" | "tiles";
 
@@ -46,7 +47,7 @@ interface SpotifyFindWithLikes {
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
-  const { isOpen: sidebarOpen, isMobileOpen } = useSidebar();
+  const { isOpen: sidebarOpen } = useSidebar();
   const [finds, setFinds] = useState<SpotifyFindWithLikes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,31 +78,31 @@ export default function Home() {
   }, []);
 
   const fetchFinds = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    try {
-      const response = await apiFetch(`/api/finds?scope=${viewMode}`);
-      if (response.ok) {
-        const data: SpotifyFindWithLikes[] = await response.json();
+    if (!user) { setLoading(false); return; }
+    const key = `finds:${viewMode}`;
+    await fetchSWR<SpotifyFindWithLikes[]>(
+      key,
+      async () => {
+        const res = await apiFetch(`/api/finds?scope=${viewMode}`);
+        if (!res.ok) throw new Error("Failed to load music");
+        return res.json();
+      },
+      (data, isBackground) => {
         setFinds(data);
-      } else {
+        if (!isBackground) setLoading(false);
+        setError("");
+      },
+      () => {
         setError("Failed to load music");
-      }
-    } catch {
-      setError("Failed to load music");
-    } finally {
-      setLoading(false);
-    }
+        setLoading(false);
+      },
+    );
   }, [user, viewMode]);
 
   useEffect(() => {
+    setLoading(!getCached(`finds:${viewMode}`));
     fetchFinds();
-  }, [fetchFinds]);
+  }, [fetchFinds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to top when layout changes
   useEffect(() => {
@@ -166,7 +167,7 @@ export default function Home() {
       />
 
       {/* Main content area */}
-      <div className={`transition-all duration-300 ${sidebarOpen && !isMobileOpen ? 'blur-sm' : ''}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen ? 'md:blur-sm' : ''}`}>
         <main className="container mx-auto px-4 pt-4 pb-8">
           {/* Sticky Toolbar */}
           <div className={`sticky top-4 z-40 mb-6 transition-all duration-300 ${toolbarVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
@@ -278,6 +279,7 @@ export default function Home() {
         isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false);
+          invalidateCache(`finds:${viewMode}`);
           fetchFinds();
         }}
       />

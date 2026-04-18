@@ -5,6 +5,7 @@ import { useAuth } from "@/components/SupabaseAuthProvider";
 import { Newspaper, Bookmark } from "lucide-react";
 import { useSidebar } from "@/components/SidebarContext";
 import { apiFetch } from "@/lib/api-fetch";
+import { fetchSWR, getCached } from "@/lib/cache";
 
 interface NewsArticle {
   title: string;
@@ -267,30 +268,27 @@ export default function NewsPage() {
   );
 
   const fetchNews = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setError("");
-      const response = await apiFetch("/api/news");
-      if (!response.ok) {
-        setError("Failed to load news");
-        return;
-      }
-      const data = await response.json();
-      setArticles(data);
-    } catch {
-      setError("Failed to load news");
-    } finally {
-      setLoading(false);
-    }
+    if (!user) { setLoading(false); return; }
+    await fetchSWR<NewsArticle[]>(
+      "news",
+      async () => {
+        const res = await apiFetch("/api/news");
+        if (!res.ok) throw new Error("Failed to load news");
+        return res.json();
+      },
+      (data, isBackground) => {
+        setArticles(data);
+        if (!isBackground) setLoading(false);
+        setError("");
+      },
+      () => { setError("Failed to load news"); setLoading(false); },
+    );
   }, [user]);
 
   useEffect(() => {
+    setLoading(!getCached("news"));
     fetchNews();
-  }, [fetchNews]);
+  }, [fetchNews]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (user) fetchSaved();
@@ -314,7 +312,7 @@ export default function NewsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className={`transition-all duration-300 ${sidebarOpen ? "blur-sm" : ""}`}>
+      <div className={`transition-all duration-300 ${sidebarOpen ? "md:blur-sm" : ""}`}>
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8 text-left">
             <h1 className="text-2xl sm:text-4xl font-bold mb-2">News</h1>
@@ -373,13 +371,11 @@ export default function NewsPage() {
 
           {/* Loading skeleton */}
           {loading && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, groupIdx) => (
-                <div key={groupIdx} className="grid grid-cols-[7rem_1fr] gap-x-4">
+                <div key={groupIdx}>
                   {/* Bucket label */}
-                  <div className="pt-2">
-                    <div className="h-3 skeleton rounded w-4/5" />
-                  </div>
+                  <div className="h-3 skeleton rounded w-16 mb-2" />
                   {/* Articles */}
                   <div className="space-y-0.5 border-l border-border pl-4">
                     {Array.from({ length: groupIdx === 0 ? 4 : 3 }).map((_, i) => (
@@ -419,16 +415,14 @@ export default function NewsPage() {
 
           {/* News feed — grouped by time */}
           {activeTab === "news" && !loading && !error && filteredArticles.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-4">
               {groupArticlesByTime(filteredArticles).map(({ bucket, items }) => (
-                <div key={bucket} className="grid grid-cols-[7rem_1fr] gap-x-4 mt-4 first:mt-0">
-                  {/* Bucket label — left column */}
-                  <div className="pt-2">
-                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                      {bucket}
-                    </span>
-                  </div>
-                  {/* Articles — right column */}
+                <div key={bucket}>
+                  {/* Bucket label */}
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1 block">
+                    {bucket}
+                  </span>
+                  {/* Articles */}
                   <div className="space-y-0.5 border-l border-border pl-4">
                     {items.map((article, i) => (
                       <NewsCard

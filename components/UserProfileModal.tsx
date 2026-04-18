@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { X, Flame } from "lucide-react";
+import { X, Flame, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import { fetchSWR, getCached } from "@/lib/cache";
 import { getGenreColor } from "@/lib/genres";
+
+interface FollowUser {
+  id: string;
+  name: string | null;
+  isOwnProfile: boolean;
+  isFollowing: boolean;
+}
 
 interface UserFind {
   id: string;
@@ -29,6 +37,7 @@ interface XpProfile {
   findsCount: number;
   likesReceivedCount: number;
   followersCount: number;
+  followingCount: number;
   joinedAt: string | null;
 }
 
@@ -47,28 +56,43 @@ export default function UserProfileModal({
 }: UserProfileModalProps) {
   const [finds, setFinds] = useState<UserFind[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [findsLoading, setFindsLoading] = useState(true);
+  const [findsLoading, setFindsLoading] = useState(!getCached(`user-finds:${userId}`));
   const [xpProfile, setXpProfile] = useState<XpProfile | null>(null);
+  const [followList, setFollowList] = useState<{
+    type: "followers" | "following";
+    users: FollowUser[];
+    loading: boolean;
+  } | null>(null);
 
   useEffect(() => {
     const xpEndpoint = isOwnProfile ? "/api/users/me/xp" : `/api/users/${userId}/xp`;
+    const xpCacheKey = isOwnProfile ? "me-xp" : `user-xp:${userId}`;
 
-    Promise.all([
-      apiFetch(`/api/users/${userId}/finds`).then((r) => (r.ok ? r.json() : [])),
-      isOwnProfile
-        ? Promise.resolve(null)
-        : apiFetch("/api/users").then((r) => (r.ok ? r.json() : [])),
-      apiFetch(xpEndpoint).then((r) => (r.ok ? r.json() : null)),
-    ]).then(([userFinds, allUsers, xpData]) => {
-      setFinds(userFinds);
-      if (!isOwnProfile && allUsers) {
-        const match = allUsers.find(
-          (u: { id: string; isFollowing: boolean }) => u.id === userId
-        );
-        if (match) setIsFollowing(match.isFollowing);
-      }
-      if (xpData) setXpProfile(xpData);
-    }).finally(() => setFindsLoading(false));
+    fetchSWR<UserFind[]>(
+      `user-finds:${userId}`,
+      () => apiFetch(`/api/users/${userId}/finds`).then((r) => r.ok ? r.json() : []),
+      (data, isBackground) => { setFinds(data); if (!isBackground) setFindsLoading(false); },
+      () => setFindsLoading(false),
+    );
+
+    fetchSWR<XpProfile | null>(
+      xpCacheKey,
+      () => apiFetch(xpEndpoint).then((r) => r.ok ? r.json() : null),
+      (data) => { if (data) setXpProfile(data); },
+      () => {},
+    );
+
+    if (!isOwnProfile) {
+      fetchSWR<{ id: string; isFollowing: boolean }[]>(
+        "people",
+        () => apiFetch("/api/users").then((r) => r.ok ? r.json() : []),
+        (allUsers) => {
+          const match = allUsers.find((u) => u.id === userId);
+          if (match) setIsFollowing(match.isFollowing);
+        },
+        () => {},
+      );
+    }
   }, [userId, isOwnProfile]);
 
   const toggleFollow = () => {
@@ -78,6 +102,32 @@ export default function UserProfileModal({
         if (!res.ok) setIsFollowing((prev) => !prev);
       })
       .catch(() => setIsFollowing((prev) => !prev));
+  };
+
+  const openFollowList = async (type: "followers" | "following") => {
+    const cacheKey = `user-${type}:${userId}`;
+    const hasCached = !!getCached(cacheKey);
+    setFollowList({ type, users: [], loading: !hasCached });
+    await fetchSWR<FollowUser[]>(
+      cacheKey,
+      async () => {
+        const r = await apiFetch(`/api/users/${userId}/${type}`);
+        return r.ok ? r.json() : [];
+      },
+      (users) => setFollowList((prev) => prev ? { ...prev, users, loading: false } : null),
+      () => setFollowList((prev) => prev ? { ...prev, loading: false } : null),
+    );
+  };
+
+  const toggleFollowInList = (targetId: string, currentlyFollowing: boolean) => {
+    setFollowList((prev) =>
+      prev ? { ...prev, users: prev.users.map((u) => u.id === targetId ? { ...u, isFollowing: !currentlyFollowing } : u) } : null
+    );
+    apiFetch(`/api/users/${targetId}/follow`, { method: "POST" }).catch(() => {
+      setFollowList((prev) =>
+        prev ? { ...prev, users: prev.users.map((u) => u.id === targetId ? { ...u, isFollowing: currentlyFollowing } : u) } : null
+      );
+    });
   };
 
   const formatJoinDate = (isoDate: string | null) => {
@@ -95,7 +145,7 @@ export default function UserProfileModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-3">
@@ -150,10 +200,24 @@ export default function UserProfileModal({
                 <span className="font-semibold">{xpProfile.likesReceivedCount}</span>
                 <span className="text-muted-foreground"> likes received</span>
               </div>
-              <div className="bg-muted rounded-lg px-3 py-2 text-center text-sm">
+              <button
+                type="button"
+                onClick={() => openFollowList("followers")}
+                className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+              >
                 <span className="font-semibold">{xpProfile.followersCount}</span>
-                <span className="text-muted-foreground"> followers</span>
-              </div>
+                <span className="text-muted-foreground">followers</span>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+              <button
+                type="button"
+                onClick={() => openFollowList("following")}
+                className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
+              >
+                <span className="font-semibold">{xpProfile.followingCount}</span>
+                <span className="text-muted-foreground">following</span>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
             </div>
 
             {/* XP panel — own profile only */}
@@ -256,6 +320,59 @@ export default function UserProfileModal({
           )}
         </div>
       </div>
+
+      {/* Followers / Following list — floats centered over the modal */}
+      {followList && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/40 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setFollowList(null); }}
+        >
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm mx-4 max-h-[60vh] flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+              <h3 className="font-semibold text-base">
+                {followList.type === "followers" ? "Followers" : "Following"}
+              </h3>
+              <button onClick={() => setFollowList(null)} aria-label="Close" className="p-1.5 rounded-lg hover:bg-accent transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 py-1">
+              {followList.loading && (
+                <div className="py-10 text-center text-muted-foreground text-sm">Loading…</div>
+              )}
+              {!followList.loading && followList.users.length === 0 && (
+                <div className="py-10 text-center text-muted-foreground text-sm">Nobody here yet.</div>
+              )}
+              {!followList.loading && followList.users.map((u) => (
+                <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted transition-colors">
+                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-foreground font-bold text-sm shrink-0">
+                    {(u.name || "?")[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {u.name || "Unnamed User"}
+                      {u.isOwnProfile && <span className="ml-1.5 text-xs text-muted-foreground font-normal">(you)</span>}
+                    </p>
+                  </div>
+                  {!u.isOwnProfile && (
+                    <button
+                      type="button"
+                      onClick={() => toggleFollowInList(u.id, u.isFollowing)}
+                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                        u.isFollowing
+                          ? "border-border text-foreground hover:bg-muted"
+                          : "bg-foreground text-background border-transparent hover:opacity-90"
+                      }`}
+                    >
+                      {u.isFollowing ? "Unfollow" : "Follow"}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

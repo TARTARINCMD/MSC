@@ -1,9 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
+  provider        = "prisma-client-js"
+  output          = "../node_modules/.prisma/client"
   previewFeatures = ["driverAdapters"]
 }
 
@@ -12,66 +9,62 @@ datasource db {
 }
 
 model User {
-  id        String   @id // Supabase auth.users id (UUID)
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  finds         SpotifyFind[]
-  likes         Like[]
+  id            String         @id
+  email         String         @unique
+  name          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   comments      Comment[]
-  followers     Follow[] @relation("UserFollowers")
-  following     Follow[] @relation("UserFollowing")
+  following     Follow[]       @relation("UserFollowing")
+  followers     Follow[]       @relation("UserFollowers")
+  likes         Like[]
   savedArticles SavedArticle[]
+  finds         SpotifyFind[]
   xp            UserXP?
   xpEvents      XpEvent[]
 }
 
 model SpotifyFind {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   artist      String
-  type        String   // "track" | "album" | "playlist"
+  type        String
   spotifyUrl  String
   spotifyId   String?
   imageUrl    String?
   description String?
   genre       String?
-  dateAdded   DateTime @default(now())
+  dateAdded   DateTime  @default(now())
   userId      String
-
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes       Like[]
   comments    Comment[]
+  likes       Like[]
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([dateAdded])
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   body      String
   userId    String
   findId    String
-  createdAt DateTime @default(now())
-
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
   find      SpotifyFind @relation(fields: [findId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([findId])
   @@index([userId])
 }
 
 model Like {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   userId    String
   findId    String
-  createdAt DateTime @default(now())
-  
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
   find      SpotifyFind @relation(fields: [findId], references: [id], onDelete: Cascade)
-  
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, findId])
   @@index([findId])
 }
@@ -81,9 +74,8 @@ model Follow {
   followerId  String
   followingId String
   createdAt   DateTime @default(now())
-
-  follower    User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  following   User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followingId])
   @@index([followerId])
@@ -91,42 +83,33 @@ model Follow {
 }
 
 model SavedArticle {
-  id        String   @id @default(cuid())
-  userId    String
-  title     String
-  link      String
-  keyword   String
-  pubDate   String?
-  savedAt   DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id      String   @id @default(cuid())
+  userId  String
+  title   String
+  link    String
+  keyword String
+  pubDate String?
+  savedAt DateTime @default(now())
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, link])
   @@index([userId])
 }
 
 model NewsArticle {
-  id              String   @id @default(cuid())
-  title           String
-  link            String   @unique
-  source          String
-  pubDate         String
-  artist          String
-  artistImageUrl  String?
-  genre           String?
-  keyword         String
-  fetchedAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  title          String
+  link           String   @unique
+  source         String
+  pubDate        String
+  artist         String
+  artistImageUrl String?
+  genre          String?
+  keyword        String
+  fetchedAt      DateTime @default(now())
 
   @@index([fetchedAt])
   @@index([link])
-}
-
-enum XpEventType {
-  POST_FIND
-  LIKE_RECEIVED
-  FOLLOWER_GAINED
-  STREAK_BONUS
-  MILESTONE
 }
 
 model UserXP {
@@ -138,8 +121,7 @@ model UserXP {
   lastActivityDate DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model XpEvent {
@@ -149,10 +131,17 @@ model XpEvent {
   xpAmount  Int
   metadata  Json?
   createdAt DateTime    @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, eventType])
   @@index([createdAt])
+}
+
+enum XpEventType {
+  POST_FIND
+  LIKE_RECEIVED
+  FOLLOWER_GAINED
+  STREAK_BONUS
+  MILESTONE
 }

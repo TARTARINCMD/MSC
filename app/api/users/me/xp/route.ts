@@ -12,12 +12,13 @@ export async function GET() {
 
     const userId = authUser.id;
 
-    const [userXp, user, findsCount, likesReceived, followersCount] = await Promise.all([
+    const [userXp, user, findsCount, likesReceived, followersCount, followingCount] = await Promise.all([
       prisma.userXP.findUnique({ where: { userId } }),
       prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }),
       prisma.spotifyFind.count({ where: { userId } }),
       prisma.like.count({ where: { find: { userId } } }),
       prisma.follow.count({ where: { followingId: userId } }),
+      prisma.follow.count({ where: { followerId: userId } }),
     ]);
 
     const totalXp = userXp?.totalXp ?? 0;
@@ -36,6 +37,7 @@ export async function GET() {
       findsCount,
       likesReceivedCount: likesReceived,
       followersCount,
+      followingCount,
       joinedAt: user?.createdAt ?? null,
     });
   } catch (error) {

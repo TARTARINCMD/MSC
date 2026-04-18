@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, ChevronDown } from "lucide-react";
 import GenreSelect from "@/components/GenreSelect";
+import { PODCAST_TOPICS } from "@/lib/genres";
 import {
   extractSpotifyId,
   getPlatformFromUrl,
@@ -102,18 +103,34 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
       }
 
       if (platform === "spotify") {
-        const response = await fetch(
-          `https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          // oEmbed title is "Song · Artist" format — split on " · "
-          setFormData((prev) => ({
-            ...prev,
-            imageUrl: data.thumbnail_url || prev.imageUrl,
-            title: prev.title || data.title || "",
-          }));
-        }
+        // Detect type from URL path (e.g. /track/, /album/, /episode/, /show/)
+        const spotifyTypeMatch = url.match(/spotify\.com\/(track|album|playlist|episode|show)\//);
+        const rawType = spotifyTypeMatch?.[1];
+        const mappedType =
+          rawType === "episode" || rawType === "show"
+            ? "podcast"
+            : rawType === "track" || rawType === "album" || rawType === "playlist"
+            ? rawType
+            : null;
+
+        // oEmbed for image + title (no credentials needed)
+        const [oembed, scrape] = await Promise.all([
+          fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`),
+          fetch("/api/spotify/scrape", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          }),
+        ]);
+        const oemData = oembed.ok ? await oembed.json() : {};
+        const scrapeData = scrape.ok ? await scrape.json() : {};
+        setFormData((prev) => ({
+          ...prev,
+          imageUrl: oemData.thumbnail_url || prev.imageUrl,
+          title: prev.title || oemData.title || scrapeData.title || "",
+          artist: prev.artist || scrapeData.artist || "",
+          ...(mappedType ? { type: mappedType } : {}),
+        }));
         return;
       }
     } catch (err) {
@@ -301,7 +318,7 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
-                          setFormData({ ...formData, type: opt });
+                          setFormData({ ...formData, type: opt, genre: "" });
                           setTypeOpen(false);
                         }}
                         className="w-full text-left px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -316,13 +333,14 @@ export default function AddMusicModal({ isOpen, onClose }: AddMusicModalProps) {
 
             <div>
               <label htmlFor="genre" className="block text-sm font-medium mb-2 px-1">
-                Genre
+                {formData.type === "podcast" ? "Topic" : "Genre"}
               </label>
               <GenreSelect
                 value={formData.genre}
                 onChange={(value) => setFormData({ ...formData, genre: value })}
-                placeholder="Select a genre"
+                placeholder={formData.type === "podcast" ? "Select a topic" : "Select a genre"}
                 inputClassName="px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                options={formData.type === "podcast" ? PODCAST_TOPICS : undefined}
               />
             </div>
           </div>
