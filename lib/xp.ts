@@ -198,6 +198,24 @@ export function getMilestoneXp(findCount: number): number | null {
   return MILESTONE_XP[pos] ?? null;
 }
 
+// Returns the effective streak considering staleness, using the same 36h window
+// as updateStreak to handle timezone differences.
+export function getEffectiveStreak(
+  storedStreak: number,
+  lastActivityDate: Date | null,
+  now: Date = new Date()
+): number {
+  if (!lastActivityDate || storedStreak === 0) return storedStreak;
+  const diffHours = (now.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60);
+  if (diffHours < 36) return storedStreak;
+  // Also allow if last activity was yesterday UTC
+  const yesterday = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const lastStr = lastActivityDate.toISOString().slice(0, 10);
+  if (lastStr === yesterday.toISOString().slice(0, 10)) return storedStreak;
+  return 0;
+}
+
 // Streak bonus grows unbounded — no cap.
 export function computeStreakBonus(currentStreak: number): number {
   return XP_STREAK_BONUS_PER_DAY * currentStreak;
@@ -208,33 +226,41 @@ export interface StreakResult {
   isNewDay: boolean;
 }
 
-// Compares UTC calendar dates. Returns new streak and whether XP should be awarded.
+// Uses a 36-hour window for "consecutive day" to handle timezone differences —
+// a post at 23:00 local time may land on the next UTC date, so strict 24h would
+// falsely break the streak for users east of UTC.
 export function updateStreak(
   lastActivityDate: Date | null,
   now: Date = new Date()
 ): StreakResult {
-  const todayStr = now.toISOString().slice(0, 10);
-
   if (!lastActivityDate) {
     return { newStreak: 1, isNewDay: true };
   }
 
-  const lastStr = lastActivityDate.toISOString().slice(0, 10);
+  const diffMs = now.getTime() - lastActivityDate.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
 
-  if (lastStr === todayStr) {
-    // Same day — no streak change, no bonus
-    return { newStreak: -1, isNewDay: false }; // -1 = caller should keep existing streak
+  if (diffHours < 24) {
+    // Same effective day — no streak change, no bonus
+    return { newStreak: -1, isNewDay: false };
   }
 
+  if (diffHours < 36) {
+    // Within 36h — counts as consecutive day
+    return { newStreak: -1, isNewDay: true };
+  }
+
+  // Check if it's just the next UTC calendar day (covers remaining timezone edge cases)
+  const todayStr = now.toISOString().slice(0, 10);
   const yesterday = new Date(now);
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const lastStr = lastActivityDate.toISOString().slice(0, 10);
 
-  if (lastStr === yesterdayStr) {
-    // Consecutive day — increment (caller adds 1 to existing streak)
-    return { newStreak: -1, isNewDay: true }; // -1 = increment existing
+  if (lastStr === todayStr || lastStr === yesterdayStr) {
+    return { newStreak: -1, isNewDay: true };
   }
 
-  // Gap of 2+ days — reset
+  // Gap too large — reset
   return { newStreak: 1, isNewDay: true };
 }

@@ -176,11 +176,9 @@ export default function Sidebar() {
                             />
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {xpData.xpIntoLevel.toLocaleString()} /{" "}
                             {xpData.xpNeededForNext > 0
-                              ? xpData.xpNeededForNext.toLocaleString()
-                              : "MAX"}{" "}
-                            XP
+                              ? `${(xpData.xpNeededForNext - xpData.xpIntoLevel).toLocaleString()} XP to next`
+                              : "MAX"}
                           </p>
                         </div>
                       ) : (

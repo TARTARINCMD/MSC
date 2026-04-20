@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
-import { getLevelFromXp } from "@/lib/xp";
+import { getLevelFromXp, getEffectiveStreak } from "@/lib/xp";
 
 export async function GET() {
   try {
@@ -23,10 +23,14 @@ export async function GET() {
 
     const totalXp = userXp?.totalXp ?? 0;
     const levelInfo = getLevelFromXp(totalXp);
+    const currentStreak = getEffectiveStreak(
+      userXp?.currentStreak ?? 0,
+      userXp?.lastActivityDate ?? null
+    );
 
     return NextResponse.json({
       totalXp,
-      currentStreak: userXp?.currentStreak ?? 0,
+      currentStreak,
       longestStreak: userXp?.longestStreak ?? 0,
       level: levelInfo.level,
       levelName: levelInfo.name,

@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { fetchSWR, getCached } from "@/lib/cache";
 import { getGenreColor } from "@/lib/genres";
 
+
 interface FollowUser {
   id: string;
   name: string | null;
@@ -245,7 +246,7 @@ export default function UserProfileModal({
                 </div>
 
                 {/* XP progress bar */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-2.5 bg-green-500 rounded-full transition-all duration-500"
@@ -253,17 +254,24 @@ export default function UserProfileModal({
                     />
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>
-                      {xpProfile.xpIntoLevel.toLocaleString()} /{" "}
-                      {xpProfile.xpNeededForNext > 0
-                        ? xpProfile.xpNeededForNext.toLocaleString()
-                        : "MAX"}{" "}
-                      XP
-                    </span>
+                    {xpProfile.xpNeededForNext > 0 ? (
+                      <span>
+                        <span className="font-medium text-foreground">
+                          {(xpProfile.xpNeededForNext - xpProfile.xpIntoLevel).toLocaleString()} XP
+                        </span>
+                        {" "}to next level
+                        <span className="ml-1 opacity-60">
+                          ({xpProfile.xpIntoLevel.toLocaleString()} / {xpProfile.xpNeededForNext.toLocaleString()})
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="font-medium text-foreground">Max level</span>
+                    )}
                     {xpProfile.nextLevelName && (
                       <span>Next: {xpProfile.nextLevelName}</span>
                     )}
                   </div>
+
                 </div>
               </div>
             )}
