@@ -147,9 +147,7 @@ export async function POST(request: Request) {
       },
     });
 
-    Promise.resolve()
-      .then(() => handlePostFindXp(user.id, prisma))
-      .catch(console.error);
+    await handlePostFindXp(user.id, prisma);
 
     return NextResponse.json(find, { status: 201 });
   } catch (error) {
