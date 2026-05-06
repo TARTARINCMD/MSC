@@ -12,6 +12,7 @@ export default function MasonryView({ finds, onCardClick }: MasonryViewProps) {
     id: find.id,
     img: find.imageUrl || 'https://via.placeholder.com/600x600?text=No+Image',
     url: find.spotifyUrl,
+    spotifyUrl: find.spotifyUrl,
     height: Math.random() * 400 + 300, // Random heights for masonry effect
     title: find.title,
     artist: find.artist,

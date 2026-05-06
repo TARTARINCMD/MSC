@@ -3,11 +3,12 @@
 import { useState, useEffect, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, Play } from "lucide-react";
 import { getGenreColor } from "@/lib/genres";
 import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
 import { apiFetch } from "@/lib/api-fetch";
 import Image from "next/image";
+import { useMiniPlayer } from "@/components/MiniPlayerContext";
 
 interface FindCardHorizontalProps {
   find: SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number };
@@ -29,6 +30,9 @@ function FindCardHorizontal({
   const [liked, setLiked] = useState(find.liked || false);
   const [likeCount, setLikeCount] = useState(find.likeCount || 0);
   const [isLiking, setIsLiking] = useState(false);
+  const { setTrack } = useMiniPlayer();
+  const platform = getPlatformFromUrl(find.spotifyUrl);
+  const canPlay = platform !== "unknown";
 
   useEffect(() => {
     if (find.imageUrl) {
@@ -202,11 +206,21 @@ function FindCardHorizontal({
           )}
 
           {/* Date + actions */}
-          <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center justify-between mt-1 gap-3">
             <p className="text-xs text-muted-foreground">
               {new Date(find.dateAdded).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
             </p>
             <div className="flex items-center gap-3 shrink-0">
+              {canPlay && (
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTrack({ url: find.spotifyUrl, title: find.title, artist: find.artist, imageUrl: find.imageUrl }); }}
+                  aria-label={`Play ${find.title}`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:scale-105 active:scale-95 transition-transform shadow-sm"
+                >
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  Play
+                </button>
+              )}
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
                 className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}

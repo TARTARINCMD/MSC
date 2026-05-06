@@ -1,6 +1,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { gsap } from 'gsap';
+import { Play } from 'lucide-react';
+import { useMiniPlayer } from '@/components/MiniPlayerContext';
+import { getPlatformFromUrl } from '@/lib/streaming';
 import './Masonry.css';
 
 const useMedia = (queries: string[], values: number[], defaultValue: number): number => {
@@ -55,6 +58,7 @@ interface Item {
   height: number;
   title?: string;
   artist?: string;
+  spotifyUrl?: string;
 }
 
 interface GridItem extends Item {
@@ -89,6 +93,7 @@ const Masonry: React.FC<MasonryProps> = ({
   colorShiftOnHover = false,
   onItemClick
 }) => {
+  const { setTrack } = useMiniPlayer();
   const columns = useMedia(
     ['(min-width:1500px)', '(min-width:1000px)', '(min-width:600px)', '(min-width:400px)'],
     [5, 4, 3, 2],
@@ -264,11 +269,30 @@ const Masonry: React.FC<MasonryProps> = ({
             <div className="item-img" style={{ backgroundImage: `url(${item.img})` }}>
               {/* Text overlay */}
               <div className="item-text-overlay">
-                {item.title && (
-                  <div className="item-title">{item.title}</div>
-                )}
-                {item.artist && (
-                  <div className="item-artist">{item.artist}</div>
+                <div className="item-text-content">
+                  {item.title && (
+                    <div className="item-title">{item.title}</div>
+                  )}
+                  {item.artist && (
+                    <div className="item-artist">{item.artist}</div>
+                  )}
+                </div>
+                {item.spotifyUrl && getPlatformFromUrl(item.spotifyUrl) !== 'unknown' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTrack({
+                        url: item.spotifyUrl!,
+                        title: item.title || '',
+                        artist: item.artist || '',
+                        imageUrl: item.img,
+                      });
+                    }}
+                    aria-label={`Play ${item.title || ''}`}
+                    className="item-play-btn"
+                  >
+                    <Play className="h-5 w-5 ml-0.5 fill-current" />
+                  </button>
                 )}
               </div>
               

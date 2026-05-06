@@ -20,6 +20,7 @@ interface Person {
   followingCount: number;
   topGenres: string[];
   findCount: number;
+  currentStreak: number;
 }
 
 interface FollowUser {
@@ -362,9 +363,15 @@ export default function PeoplePage() {
                                 <span className="shrink-0 text-xs bg-primary/15 text-primary rounded-full px-2 py-0.5 font-medium">you</span>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              {person.findCount} {person.findCount === 1 ? "find" : "finds"} · {person.followersCount} {person.followersCount === 1 ? "follower" : "followers"}
-                            </p>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <span>{person.findCount} {person.findCount === 1 ? "find" : "finds"} · {person.followersCount} {person.followersCount === 1 ? "follower" : "followers"}</span>
+                              {person.currentStreak > 0 && (
+                                <span className="inline-flex items-center gap-0.5 text-orange-500 font-semibold">
+                                  <Flame className="h-3.5 w-3.5" />
+                                  {person.currentStreak}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-1.5 min-h-[1.75rem]">
@@ -442,6 +449,7 @@ export default function PeoplePage() {
                                 followingCount: 0,
                                 topGenres: [],
                                 findCount: 0,
+                                currentStreak: 0,
                               });
                             }
                           }

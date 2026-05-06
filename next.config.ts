@@ -7,7 +7,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "i.scdn.co",
-        // This allows all paths from Spotify's image CDN
+      },
+      {
+        protocol: "https",
+        hostname: "mosaic.scdn.co",
       },
       {
         protocol: "https",

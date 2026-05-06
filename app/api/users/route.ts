@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveStreak } from "@/lib/xp";
 
 export async function GET() {
   try {
@@ -27,6 +28,9 @@ export async function GET() {
         finds: {
           select: { genre: true },
         },
+        xp: {
+          select: { currentStreak: true, lastActivityDate: true },
+        },
       },
     });
 
@@ -51,6 +55,10 @@ export async function GET() {
         followingCount: user.following.length,
         topGenres,
         findCount: user.finds.length,
+        currentStreak: getEffectiveStreak(
+          user.xp?.currentStreak ?? 0,
+          user.xp?.lastActivityDate ?? null,
+        ),
       };
     });
 

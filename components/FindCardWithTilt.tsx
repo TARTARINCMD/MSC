@@ -4,10 +4,11 @@ import { useState, useEffect, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import TiltedCard from "./TiltedCard";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, Play } from "lucide-react";
 import { getGenreColor } from "@/lib/genres";
 import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
 import { apiFetch } from "@/lib/api-fetch";
+import { useMiniPlayer } from "@/components/MiniPlayerContext";
 
 interface FindCardProps {
   find: SpotifyFind & { likeCount?: number; liked?: boolean; commentCount?: number };
@@ -24,6 +25,9 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
   const [likeCount, setLikeCount] = useState(find.likeCount || 0);
   const [isLiking, setIsLiking] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const { setTrack } = useMiniPlayer();
+  const platform = getPlatformFromUrl(find.spotifyUrl);
+  const canPlay = platform !== "unknown";
 
   useEffect(() => {
     if (find.imageUrl) {
@@ -149,42 +153,21 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
     >
       <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-all duration-200 group-hover:bg-muted group-hover:scale-[1.02] group-hover:shadow-lg relative">
         {/* TiltedCard first so buttons render on top */}
-        <TiltedCard
-          imageSrc={imageUrl}
-          altText={`${find.title} by ${find.artist}`}
-          captionText={`${find.title} - ${find.artist}`}
-          containerHeight="300px"
-          containerWidth="100%"
-          imageHeight="300px"
-          imageWidth="100%"
-          rotateAmplitude={12}
-          scaleOnHover={1.2}
-          showMobileWarning={false}
-          showTooltip={false}
-          displayOverlayContent={false}
-        />
-
-        {/* Comment + Like buttons — rendered after TiltedCard so they sit on top */}
-        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2">
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
-            className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
-          >
-            <MessageCircle className="h-6 w-6 text-zinc-800 dark:text-white drop-shadow" />
-            <span className="text-base font-semibold text-zinc-800 dark:text-white drop-shadow">{find.commentCount || 0}</span>
-          </button>
-          <button
-            onClick={handleLike}
-            disabled={!user || isLiking}
-            className={`flex items-center gap-1 transition-all ${
-              !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
-            } ${isAnimating ? "animate-bounce" : ""}`}
-          >
-            <Heart
-              className={`h-6 w-6 transition-all duration-200 drop-shadow ${liked ? "fill-pink-500 text-pink-500" : "text-zinc-800 dark:text-white"} ${isAnimating ? "scale-125" : ""}`}
-            />
-            <span className={`text-base font-semibold transition-colors drop-shadow ${liked ? "text-pink-500" : "text-zinc-800 dark:text-white"}`}>{likeCount}</span>
-          </button>
+        <div className="relative">
+          <TiltedCard
+            imageSrc={imageUrl}
+            altText={`${find.title} by ${find.artist}`}
+            captionText={`${find.title} - ${find.artist}`}
+            containerHeight="300px"
+            containerWidth="100%"
+            imageHeight="300px"
+            imageWidth="100%"
+            rotateAmplitude={12}
+            scaleOnHover={1.2}
+            showMobileWarning={false}
+            showTooltip={false}
+            displayOverlayContent={false}
+          />
         </div>
 
         <div className="mt-4 flex flex-col flex-grow">
@@ -239,13 +222,47 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
               </p>
             )}
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">
-            {new Date(find.dateAdded).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+          <div className="mt-6 relative flex items-center min-h-[48px]">
+            {canPlay && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTrack({ url: find.spotifyUrl, title: find.title, artist: find.artist, imageUrl: find.imageUrl }); }}
+                  aria-label={`Play ${find.title}`}
+                  className="pointer-events-auto w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg hover:scale-110 active:scale-95 transition-transform"
+                >
+                  <Play className="h-6 w-6 text-black fill-black ml-0.5" />
+                </button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {new Date(find.dateAdded).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCardClick?.(find); }}
+                className={`flex items-center gap-1 transition-all ${!user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"}`}
+              >
+                <MessageCircle className="h-6 w-6 text-zinc-800 dark:text-white drop-shadow" />
+                <span className="text-base font-semibold text-zinc-800 dark:text-white drop-shadow">{find.commentCount || 0}</span>
+              </button>
+              <button
+                onClick={handleLike}
+                disabled={!user || isLiking}
+                className={`flex items-center gap-1 transition-all ${
+                  !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
+                } ${isAnimating ? "animate-bounce" : ""}`}
+              >
+                <Heart
+                  className={`h-6 w-6 transition-all duration-200 drop-shadow ${liked ? "fill-pink-500 text-pink-500" : "text-zinc-800 dark:text-white"} ${isAnimating ? "scale-125" : ""}`}
+                />
+                <span className={`text-base font-semibold transition-colors drop-shadow ${liked ? "text-pink-500" : "text-zinc-800 dark:text-white"}`}>{likeCount}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

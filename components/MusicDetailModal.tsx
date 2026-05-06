@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
-import { X, ExternalLink, Trash2, Edit, MessageCircle, Send } from "lucide-react";
+import { X, Trash2, Edit, MessageCircle, Send } from "lucide-react";
 import GenreSelect from "@/components/GenreSelect";
-import { getPlatformFromUrl, getPlatformLabel } from "@/lib/streaming";
 import { getGenreColor } from "@/lib/genres";
+import EmbedPlayer from "@/components/EmbedPlayer";
 import { apiFetch } from "@/lib/api-fetch";
 
 interface Comment {
@@ -138,13 +138,6 @@ setIsEditing(false);
   if (!isOpen || !music) return null;
 
   const isOwner = !!user && user.id === music.userId;
-  const platform = getPlatformFromUrl(music.spotifyUrl);
-  const platformLabel = getPlatformLabel(platform);
-  const platformHoverClass =
-    platform === "spotify" ? "hover:bg-green-600 hover:border-green-600" :
-    platform === "apple_music" ? "hover:bg-pink-600 hover:border-pink-600" :
-    platform === "youtube" || platform === "youtube_music" ? "hover:bg-red-600 hover:border-red-600" :
-    "hover:bg-primary/90";
 
 
   const handleDelete = async () => {
@@ -198,88 +191,66 @@ setIsEditing(false);
     >
       <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-[90vh] flex flex-col">
 
-        {/* ── TOP: blurred bg + cover left / info right ── */}
-        <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-pink-900/40">
-          {music.imageUrl && (
-            <div className="absolute inset-0">
-              <img src={music.imageUrl} alt="" className="w-full h-full object-cover blur-3xl opacity-30 scale-110" />
+        {/* ── TOP: header ── */}
+        <div className="relative shrink-0 px-5 sm:px-6 pt-5 pb-4 flex flex-col gap-2">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-secondary transition-colors z-10"
+          >
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-tight line-clamp-2 pr-10">
+            {music.title}
+          </h2>
+          <p className="text-base text-muted-foreground font-medium line-clamp-1">{music.artist}</p>
+
+          {/* Tags */}
+          {isEditing && isOwner ? (
+            <div className="flex flex-wrap gap-2 mt-1">
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className="px-3 py-1 bg-background border border-border rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+              >
+                <option value="track">Track</option>
+                <option value="album">Album</option>
+                <option value="playlist">Playlist</option>
+                <option value="podcast">Podcast</option>
+              </select>
+              <GenreSelect
+                value={genre}
+                onChange={(value) => setGenre(value)}
+                placeholder="Genre (optional)"
+                inputClassName="px-3 py-1 bg-background border border-border rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+                dropdownClassName="min-w-[200px]"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              <span className="inline-block rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground capitalize">
+                {music.type}
+              </span>
+              {music.genre && (
+                <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${getGenreColor(music.genre)}`}>
+                  {music.genre}
+                </span>
+              )}
+              {music.user?.name && (
+                <span className="inline-block rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  by {music.user.name}
+                </span>
+              )}
             </div>
           )}
 
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-lg transition-colors backdrop-blur-sm z-10"
-          >
-            <X className="h-5 w-5 text-white" />
-          </button>
-
-          {/* Cover stretches full height, info column beside it */}
-          <div className="relative flex items-stretch gap-0">
-            {/* Cover — full height of the gradient block */}
-            <div className="shrink-0 w-28 sm:w-36 md:w-44 overflow-hidden bg-black/30">
-              {music.imageUrl ? (
-                <img src={music.imageUrl} alt={music.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-3xl">🎵</div>
-              )}
-            </div>
-
-            {/* Info — date pushed to bottom */}
-            <div className="flex-1 min-w-0 flex flex-col gap-2 p-5 sm:p-6 pr-12">
-              <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight line-clamp-2">
-                {music.title}
-              </h2>
-              <p className="text-base text-white/70 font-medium line-clamp-1">{music.artist}</p>
-
-              {/* Tags */}
-              {isEditing && isOwner ? (
-                <div className="flex flex-wrap gap-2 mt-1">
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                    className="px-3 py-1 bg-background/80 border border-white/20 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
-                  >
-                    <option value="track">Track</option>
-                    <option value="album">Album</option>
-                    <option value="playlist">Playlist</option>
-                    <option value="podcast">Podcast</option>
-                  </select>
-                  <GenreSelect
-                    value={genre}
-                    onChange={(value) => setGenre(value)}
-                    placeholder="Genre (optional)"
-                    inputClassName="px-3 py-1 bg-background/80 border border-white/20 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
-                    dropdownClassName="min-w-[200px]"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  <span className="inline-block rounded-full bg-white/10 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-white/90 capitalize">
-                    {music.type}
-                  </span>
-                  {music.genre && (
-                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${getGenreColor(music.genre)}`}>
-                      {music.genre}
-                    </span>
-                  )}
-                  {music.user?.name && (
-                    <span className="inline-block rounded-full bg-primary/30 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-white/90">
-                      by {music.user.name}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Date pushed to bottom */}
-              <p className="mt-auto pt-3 text-xs text-white/40">
-                {new Date(music.dateAdded).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            {new Date(music.dateAdded).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
         </div>
 
         {/* ── BODY: scrollable ── */}
@@ -343,17 +314,7 @@ setIsEditing(false);
             ) : (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <a
-                    href={music.spotifyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium transition-all duration-300 whitespace-nowrap hover:text-white hover:font-bold ${platformHoverClass}`}
-                  >
-                    <ExternalLink className="h-4 w-4 shrink-0" />
-                    Open in {platformLabel}
-                  </a>
-
-{isOwner && (
+                  {isOwner && (
                     <>
                       <button
                         onClick={() => setIsEditing(true)}
@@ -399,6 +360,9 @@ setIsEditing(false);
               </div>
             )}
           </div>
+
+          {/* Embed player */}
+          <EmbedPlayer url={music.spotifyUrl} className="px-5 sm:px-6 pb-1" />
 
           {/* Divider */}
           <div className="mx-5 sm:mx-6 border-t border-border" />

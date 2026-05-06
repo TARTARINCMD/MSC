@@ -4,9 +4,11 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SupabaseAuthProvider } from "@/components/SupabaseAuthProvider";
 import { SidebarProvider } from "@/components/SidebarContext";
+import { MiniPlayerProvider } from "@/components/MiniPlayerContext";
 import Sidebar from "@/components/Sidebar";
 import ContentWrapper from "@/components/ContentWrapper";
 import Footer from "@/components/Footer";
+import MiniPlayer from "@/components/MiniPlayer";
 
 const outfit = Outfit({
   variable: "--font-geist-sans",
@@ -41,11 +43,14 @@ export default function RootLayout({
             enableSystem
           >
             <SidebarProvider>
-              <Sidebar />
-              <ContentWrapper>
-                {children}
-              </ContentWrapper>
-              <Footer />
+              <MiniPlayerProvider>
+                <Sidebar />
+                <ContentWrapper>
+                  {children}
+                </ContentWrapper>
+                <Footer />
+                <MiniPlayer />
+              </MiniPlayerProvider>
             </SidebarProvider>
           </ThemeProvider>
         </SupabaseAuthProvider>

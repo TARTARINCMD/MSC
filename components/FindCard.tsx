@@ -5,8 +5,10 @@ import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
 import { getGenreColor } from "@/lib/genres";
 import SpotifyImage from "./SpotifyImage";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, Play } from "lucide-react";
 import { apiFetch } from "@/lib/api-fetch";
+import { useMiniPlayer } from "@/components/MiniPlayerContext";
+import { getPlatformFromUrl } from "@/lib/streaming";
 
 const PARTICLES = [
   { tx: "-28px", ty: "-28px" },
@@ -40,6 +42,9 @@ function FindCard({ find, onLikeUpdate, onCardClick }: FindCardProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
   const particleKey = useRef(0);
+  const { setTrack } = useMiniPlayer();
+  const platform = getPlatformFromUrl(find.spotifyUrl);
+  const canPlay = platform !== "unknown";
 
   const isNew = (() => {
     const addedDate = new Date(find.dateAdded);
@@ -99,40 +104,6 @@ function FindCard({ find, onLikeUpdate, onCardClick }: FindCardProps) {
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-110"
           />
-          <div className="absolute bottom-3 right-3 flex items-center gap-2">
-            <button
-              onClick={handleCommentClick}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800 transition-all ${
-                !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
-              }`}
-            >
-              <MessageCircle className="h-4 w-4 text-white" />
-              <span className="text-xs font-semibold text-white">{find.commentCount || 0}</span>
-            </button>
-            <button
-              onClick={handleLike}
-              disabled={!user || isLiking}
-              className={`relative flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-800 transition-all ${
-                !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-              }`}
-            >
-              {showParticles && PARTICLES.map((p, i) => (
-                <span
-                  key={`${particleKey.current}-${i}`}
-                  className="animate-particle pointer-events-none absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-pink-400"
-                  style={{ "--tx": p.tx, "--ty": p.ty, animationDelay: `${i * 30}ms` } as React.CSSProperties}
-                />
-              ))}
-              <Heart
-                className={`h-4 w-4 transition-colors duration-200 ${
-                  liked ? "fill-pink-500 text-pink-500" : "text-white"
-                } ${isAnimating ? "animate-heart-pop" : ""}`}
-              />
-              <span className={`text-xs font-semibold transition-colors ${liked ? "text-pink-500" : "text-white"}`}>
-                {likeCount}
-              </span>
-            </button>
-          </div>
         </div>
 
         <div className="p-4">
@@ -161,13 +132,60 @@ function FindCard({ find, onLikeUpdate, onCardClick }: FindCardProps) {
           {find.description && (
             <p className="mt-2 text-sm text-muted-foreground line-clamp-2 italic">{find.description}</p>
           )}
-          <p className="mt-6 text-xs text-muted-foreground">
-            {new Date(find.dateAdded).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+          <div className="mt-6 flex items-center">
+            <p className="text-xs text-muted-foreground">
+              {new Date(find.dateAdded).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+            <div className="flex-1 flex justify-center">
+              {canPlay && (
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTrack({ url: find.spotifyUrl, title: find.title, artist: find.artist, imageUrl: find.imageUrl }); }}
+                  aria-label={`Play ${find.title}`}
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow-md hover:scale-110 active:scale-95 transition-transform"
+                >
+                  <Play className="h-4 w-4 text-black fill-black ml-0.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCommentClick}
+                className={`flex items-center gap-1.5 transition-all ${
+                  !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:scale-110"
+                }`}
+              >
+                <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground">{find.commentCount || 0}</span>
+              </button>
+              <button
+                onClick={handleLike}
+                disabled={!user || isLiking}
+                className={`relative flex items-center gap-1.5 transition-all ${
+                  !user ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                }`}
+              >
+                {showParticles && PARTICLES.map((p, i) => (
+                  <span
+                    key={`${particleKey.current}-${i}`}
+                    className="animate-particle pointer-events-none absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-pink-400"
+                    style={{ "--tx": p.tx, "--ty": p.ty, animationDelay: `${i * 30}ms` } as React.CSSProperties}
+                  />
+                ))}
+                <Heart
+                  className={`h-4 w-4 transition-colors duration-200 ${
+                    liked ? "fill-pink-500 text-pink-500" : "text-muted-foreground"
+                  } ${isAnimating ? "animate-heart-pop" : ""}`}
+                />
+                <span className={`text-xs font-semibold transition-colors ${liked ? "text-pink-500" : "text-muted-foreground"}`}>
+                  {likeCount}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

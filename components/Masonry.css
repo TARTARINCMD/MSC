@@ -36,10 +36,43 @@
   opacity: 0;
   transition: opacity 0.25s ease;
   pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .item-wrapper:hover .item-text-overlay {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.item-text-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-play-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.item-play-btn:hover {
+  transform: scale(1.1);
+}
+
+.item-play-btn:active {
+  transform: scale(0.95);
 }
 
 .item-title {
