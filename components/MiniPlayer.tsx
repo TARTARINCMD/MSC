@@ -216,11 +216,11 @@ export default function MiniPlayer() {
   const width = isYouTube ? "w-[400px]" : "w-[360px]";
 
   return (
-    <div className={`fixed bottom-4 right-4 z-[300] ${width} max-w-[calc(100vw-2rem)]`}>
+    <div className={`fixed bottom-4 right-4 z-[300] ${width} max-w-[calc(100vw-2rem)] flex flex-col items-end gap-1`}>
       <button
         onClick={() => setTrack(null)}
         aria-label="Close player"
-        className="absolute -top-3 -right-3 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-background border border-border shadow-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+        className="w-10 h-10 flex items-center justify-center rounded-full bg-background border border-border shadow-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
       >
         <X className="h-5 w-5" />
       </button>
