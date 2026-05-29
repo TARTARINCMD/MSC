@@ -45,12 +45,11 @@ export default function LoginPage() {
         return;
       }
 
-      await apiFetch("/api/auth/ensure-profile", { method: "POST" });
+      // Fire ensure-profile but don't block navigation on it
+      apiFetch("/api/auth/ensure-profile", { method: "POST" }).catch(() => {});
       router.push("/");
-      router.refresh();
     } catch {
       setError("Something went wrong");
-    } finally {
       setLoading(false);
     }
   };

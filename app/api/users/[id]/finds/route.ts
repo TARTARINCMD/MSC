@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
-import { getAuthUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authUser = await getAuthUser();
-    const currentUserId = authUser?.id;
-
-    if (!currentUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: userId } = await params;
 
     const finds = await prisma.spotifyFind.findMany({

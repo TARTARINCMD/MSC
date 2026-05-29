@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getAuthUser } from "@/lib/auth-server";
 import { prisma } from "@/lib/prisma";
 import { getLevelFromXp, getEffectiveStreak } from "@/lib/xp";
 
@@ -8,11 +7,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authUser = await getAuthUser();
-    if (!authUser?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: userId } = await params;
 
     const [userXp, user, findsCount, likesReceived, followersCount, followingCount] = await Promise.all([

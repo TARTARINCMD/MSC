@@ -84,10 +84,10 @@ function NewsCard({
 
   return (
     <div
-      className={`group flex items-center gap-3 rounded-lg px-2 py-2 transition-all hover:bg-muted hover:scale-[1.01] hover:shadow-sm ${
+      className={`group flex items-center gap-3 rounded-lg px-2 py-2 transition-all hover:scale-[1.01] hover:shadow-sm ${
         fresh
-          ? "border-l-2 border-l-primary bg-primary/5 border-t border-r border-b border-transparent"
-          : "border border-transparent"
+          ? "border-l-2 border-l-primary bg-muted border-t border-r border-b border-transparent hover:bg-muted/70"
+          : "bg-muted/50 border border-transparent hover:bg-muted"
       }`}
     >
       {/* Main content */}
@@ -138,7 +138,7 @@ function SavedCard({
   highlightTerms: HighlightTerm[];
 }) {
   return (
-    <div className="group flex items-center gap-3 rounded-lg px-2 py-2 border-0 transition-all hover:bg-muted hover:scale-[1.01] hover:shadow-sm">
+    <div className="group flex items-center gap-3 rounded-lg px-2 py-2 bg-muted/50 border border-transparent transition-all hover:bg-muted hover:scale-[1.01] hover:shadow-sm">
       {/* Main content */}
       <a
         href={article.link}

@@ -9,7 +9,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { useSidebar } from "./SidebarContext";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api-fetch";
-import UserProfileModal from "./UserProfileModal";
+import MusicDetailModal from "./MusicDetailModal";
 
 interface XpData {
   totalXp: number;
@@ -27,7 +27,24 @@ export default function Sidebar() {
   const { user, loading, signOut } = useAuth();
   const pathname = usePathname();
   const [xpData, setXpData] = useState<XpData | null>(null);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [randomFind, setRandomFind] = useState<Record<string, unknown> | null>(null);
+  const [randomFindLoading, setRandomFindLoading] = useState(false);
+
+  const openRandomFind = async () => {
+    if (randomFindLoading) return;
+    setRandomFindLoading(true);
+    try {
+      const res = await apiFetch("/api/finds?scope=all");
+      if (res.ok) {
+        const finds: Record<string, unknown>[] = await res.json();
+        if (finds.length > 0) {
+          setRandomFind(finds[Math.floor(Math.random() * finds.length)]);
+        }
+      }
+    } finally {
+      setRandomFindLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -78,8 +95,12 @@ export default function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo Section */}
           <div className="relative flex items-center justify-center py-6 overflow-hidden w-full">
-            <div
-              className={`transition-all duration-300 ${expanded ? "scale-[0.85]" : "scale-[0.35]"} flex items-center justify-center`}
+            <button
+              type="button"
+              onClick={openRandomFind}
+              disabled={randomFindLoading}
+              title="Open a random find"
+              className={`transition-all duration-300 ${expanded ? "scale-[0.85]" : "scale-[0.35]"} flex items-center justify-center cursor-pointer ${randomFindLoading ? "opacity-60" : ""}`}
             >
               <CircularText
                 text="SHARE+TUNE+"
@@ -87,7 +108,7 @@ export default function Sidebar() {
                 spinDuration={30}
                 className="custom-class"
               />
-            </div>
+            </button>
             {/* Mobile close button */}
             <button
               className="md:hidden absolute top-3 right-3 p-2 rounded-md hover:bg-accent transition-colors"
@@ -145,11 +166,11 @@ export default function Sidebar() {
 
               {/* Profile Card + Logout */}
               <div className="p-3 space-y-2">
-                {/* Profile card — opens My Profile modal */}
-                <button
-                  type="button"
-                  onClick={() => setProfileModalOpen(true)}
-                  className="w-full rounded-lg hover:bg-accent transition-colors text-left"
+                {/* Profile card — navigates to own profile page */}
+                <Link
+                  href={`/people/${user.id}`}
+                  onClick={() => setIsMobileOpen(false)}
+                  className="w-full rounded-lg hover:bg-accent transition-colors text-left block"
                 >
                   {expanded ? (
                     <div className="px-3 py-2 space-y-1">
@@ -193,7 +214,7 @@ export default function Sidebar() {
                       </div>
                     </div>
                   )}
-                </button>
+                </Link>
 
                 {/* Logout — only visible when expanded */}
                 {expanded && (
@@ -212,15 +233,11 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* My Profile Modal */}
-      {profileModalOpen && (
-        <UserProfileModal
-          userId={user.id}
-          userName={userName}
-          isOwnProfile={true}
-          onClose={() => setProfileModalOpen(false)}
-        />
-      )}
+      <MusicDetailModal
+        isOpen={!!randomFind}
+        onClose={() => setRandomFind(null)}
+        music={randomFind as Parameters<typeof MusicDetailModal>[0]["music"]}
+      />
     </>
   );
 }

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authUser = await getAuthUser();
-    if (!authUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const currentUserId = authUser?.id ?? null;
 
     const { id } = await params;
 
@@ -17,13 +17,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       orderBy: { createdAt: "desc" },
     });
 
-    const currentUserId = authUser.id;
-    const followingIds = new Set(
-      (await prisma.follow.findMany({
-        where: { followerId: currentUserId },
-        select: { followingId: true },
-      })).map((f) => f.followingId)
-    );
+    const followingIds = currentUserId
+      ? new Set(
+          (await prisma.follow.findMany({
+            where: { followerId: currentUserId },
+            select: { followingId: true },
+          })).map((f) => f.followingId)
+        )
+      : new Set<string>();
 
     const following = follows.map(({ following }) => ({
       id: following.id,

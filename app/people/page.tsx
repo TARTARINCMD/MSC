@@ -3,13 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import Link from "next/link";
-import Image from "next/image";
-import { X, Search, Flame, ChevronRight } from "lucide-react";
+import { X, Search, Flame } from "lucide-react";
 import { useSidebar } from "@/components/SidebarContext";
 import { apiFetch } from "@/lib/api-fetch";
 import { fetchSWR, getCached, prefetch } from "@/lib/cache";
 import { getGenreColor } from "@/lib/genres";
-import UserProfileModal from "@/components/UserProfileModal";
 
 interface Person {
   id: string;
@@ -21,24 +19,6 @@ interface Person {
   topGenres: string[];
   findCount: number;
   currentStreak: number;
-}
-
-interface FollowUser {
-  id: string;
-  name: string | null;
-  isOwnProfile: boolean;
-  isFollowing: boolean;
-}
-
-interface UserFind {
-  id: string;
-  title: string;
-  artist: string;
-  type: string;
-  genre: string | null;
-  spotifyUrl: string;
-  imageUrl: string | null;
-  dateAdded: string;
 }
 
 interface LeaderboardEntry {
@@ -55,32 +35,12 @@ export default function PeoplePage() {
   const { isOpen: sidebarOpen } = useSidebar();
   const [activeTab, setActiveTab] = useState<"people" | "leaderboard">("people");
   const [people, setPeople] = useState<Person[]>([]);
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
-  const [selectedPersonFinds, setSelectedPersonFinds] = useState<UserFind[]>([]);
-  const [findsLoading, setFindsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const leaderboardLoaded = useRef(false);
-  const [myProfileOpen, setMyProfileOpen] = useState(false);
-  const [followListModal, setFollowListModal] = useState<{
-    userId: string;
-    userName: string | null;
-    type: "followers" | "following";
-    users: FollowUser[];
-    loading: boolean;
-  } | null>(null);
-  const [selectedPersonXp, setSelectedPersonXp] = useState<{
-    level: number;
-    levelName: string;
-    currentStreak: number;
-    findsCount: number;
-    likesReceivedCount: number;
-    followersCount: number;
-    joinedAt: string | null;
-  } | null>(null);
 
   useEffect(() => {
     if (!user) { setLoading(false); return; }
@@ -96,8 +56,6 @@ export default function PeoplePage() {
         setPeople(data);
         if (!isBackground) setLoading(false);
         setError("");
-        // Background prefetch every person's details with a small stagger
-        // so opening any card is instant
         data.forEach((person, i) => {
           setTimeout(() => {
             prefetch(`user-finds:${person.id}`, async () => {
@@ -116,7 +74,7 @@ export default function PeoplePage() {
               const r = await apiFetch(`/api/users/${person.id}/following`);
               return r.ok ? r.json() : [];
             });
-          }, i * 150); // stagger 150ms per person to avoid burst
+          }, i * 150);
         });
       },
       () => { setError("Failed to load people"); setLoading(false); },
@@ -141,100 +99,6 @@ export default function PeoplePage() {
     );
   }, [activeTab]);
 
-  const openPersonPosts = async (person: Person) => {
-    setSelectedPerson(person);
-    setSelectedPersonXp(null);
-    setFindsLoading(!getCached(`user-finds:${person.id}`));
-
-    await Promise.all([
-      fetchSWR<UserFind[]>(
-        `user-finds:${person.id}`,
-        async () => {
-          const r = await apiFetch(`/api/users/${person.id}/finds`);
-          return r.ok ? r.json() : [];
-        },
-        (data, isBackground) => {
-          setSelectedPersonFinds(data);
-          if (!isBackground) setFindsLoading(false);
-        },
-        () => setFindsLoading(false),
-      ),
-      fetchSWR(
-        `user-xp:${person.id}`,
-        async () => {
-          const r = await apiFetch(`/api/users/${person.id}/xp`);
-          return r.ok ? r.json() : null;
-        },
-        (data) => { if (data) setSelectedPersonXp(data as typeof selectedPersonXp); },
-        () => {},
-      ),
-    ]);
-  };
-
-  const toggleFollow = (userId: string, currentlyFollowing: boolean) => {
-    setPeople((prev) =>
-      prev.map((p) => p.id === userId ? { ...p, isFollowing: !currentlyFollowing } : p)
-    );
-    setSelectedPerson((prev) =>
-      prev?.id === userId ? { ...prev, isFollowing: !currentlyFollowing } : prev
-    );
-    apiFetch(`/api/users/${userId}/follow`, { method: "POST" }).then((res) => {
-      if (!res.ok) {
-        setPeople((prev) =>
-          prev.map((p) => p.id === userId ? { ...p, isFollowing: currentlyFollowing } : p)
-        );
-        setSelectedPerson((prev) =>
-          prev?.id === userId ? { ...prev, isFollowing: currentlyFollowing } : prev
-        );
-      }
-    }).catch(() => {
-      setPeople((prev) =>
-        prev.map((p) => p.id === userId ? { ...p, isFollowing: currentlyFollowing } : p)
-      );
-      setSelectedPerson((prev) =>
-        prev?.id === userId ? { ...prev, isFollowing: currentlyFollowing } : prev
-      );
-    });
-  };
-
-  const closeModal = () => {
-    setSelectedPerson(null);
-    setSelectedPersonFinds([]);
-    setSelectedPersonXp(null);
-  };
-
-  const openFollowList = async (userId: string, userName: string | null, type: "followers" | "following") => {
-    const cacheKey = `user-${type}:${userId}`;
-    const hasCached = !!getCached(cacheKey);
-    setFollowListModal({ userId, userName, type, users: [], loading: !hasCached });
-    await fetchSWR<FollowUser[]>(
-      cacheKey,
-      async () => {
-        const r = await apiFetch(`/api/users/${userId}/${type}`);
-        return r.ok ? r.json() : [];
-      },
-      (users, isBackground) => {
-        setFollowListModal((prev) => prev ? { ...prev, users, loading: isBackground ? false : false } : null);
-      },
-      () => setFollowListModal((prev) => prev ? { ...prev, loading: false } : null),
-    );
-  };
-
-  const toggleFollowInList = (targetId: string, currentlyFollowing: boolean) => {
-    setFollowListModal((prev) =>
-      prev
-        ? { ...prev, users: prev.users.map((u) => u.id === targetId ? { ...u, isFollowing: !currentlyFollowing } : u) }
-        : null
-    );
-    apiFetch(`/api/users/${targetId}/follow`, { method: "POST" }).catch(() => {
-      setFollowListModal((prev) =>
-        prev
-          ? { ...prev, users: prev.users.map((u) => u.id === targetId ? { ...u, isFollowing: currentlyFollowing } : u) }
-          : null
-      );
-    });
-  };
-
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
@@ -256,9 +120,6 @@ export default function PeoplePage() {
       </div>
     );
   }
-
-  const userName =
-    (typeof user.user_metadata?.name === "string" ? user.user_metadata.name : null) || "User";
 
   return (
     <div className="min-h-screen">
@@ -347,10 +208,10 @@ export default function PeoplePage() {
                       </p>
                     )}
                     {filtered.map((person) => (
-                      <button
+                      <Link
                         key={person.id}
-                        onClick={() => person.isOwnProfile ? setMyProfileOpen(true) : openPersonPosts(person)}
-                        className="group text-left rounded-2xl border-0 bg-card p-5 hover:bg-muted hover:shadow-lg hover:scale-[1.02] transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                        href={`/people/${person.id}`}
+                        className="group text-left rounded-2xl border-0 bg-card p-5 hover:bg-muted hover:shadow-lg hover:scale-[1.02] transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 duration-500 block"
                       >
                         <div className="flex items-center gap-3 mb-3">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
@@ -388,7 +249,7 @@ export default function PeoplePage() {
                             <span className="text-xs text-muted-foreground italic">No music yet</span>
                           )}
                         </div>
-                      </button>
+                      </Link>
                     ))}
                   </div>
                 );
@@ -430,30 +291,9 @@ export default function PeoplePage() {
                         ? { card: "bg-orange-600/10 border border-orange-600/30", rank: "text-orange-600 dark:text-orange-400", avatar: "bg-orange-600/20 text-orange-700 dark:text-orange-400" }
                         : null;
                     return (
-                      <button
+                      <Link
                         key={entry.userId}
-                        onClick={() => {
-                          if (isOwn) {
-                            setMyProfileOpen(true);
-                          } else {
-                            const person = people.find((p) => p.id === entry.userId);
-                            if (person) {
-                              openPersonPosts(person);
-                            } else {
-                              openPersonPosts({
-                                id: entry.userId,
-                                name: entry.name,
-                                isOwnProfile: false,
-                                isFollowing: false,
-                                followersCount: 0,
-                                followingCount: 0,
-                                topGenres: [],
-                                findCount: 0,
-                                currentStreak: 0,
-                              });
-                            }
-                          }
-                        }}
+                        href={`/people/${entry.userId}`}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left hover:opacity-90 ${
                           medal
                             ? medal.card
@@ -489,7 +329,7 @@ export default function PeoplePage() {
                             {entry.totalXp.toLocaleString()} XP
                           </span>
                         </div>
-                      </button>
+                      </Link>
                     );
                   })}
                 </div>
@@ -498,212 +338,6 @@ export default function PeoplePage() {
           )}
         </div>
       </div>
-
-      {/* People modal (inline, for other users) */}
-      {selectedPerson && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-sm bg-black/50"
-          onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
-        >
-          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="relative flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
-                  {(selectedPerson.name || "?")[0].toUpperCase()}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold leading-tight">{selectedPerson.name || "Unnamed User"}</h2>
-                  <p className="text-xs text-muted-foreground">{selectedPersonFinds.length} finds</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {!selectedPerson.isOwnProfile && (
-                  <button
-                    onClick={() => toggleFollow(selectedPerson.id, selectedPerson.isFollowing)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                      selectedPerson.isFollowing
-                        ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                        : "bg-primary text-primary-foreground hover:bg-primary/90"
-                    }`}
-                  >
-                    {selectedPerson.isFollowing ? "Unfollow" : "Follow"}
-                  </button>
-                )}
-                <button onClick={closeModal} className="p-1.5 rounded-lg hover:bg-accent transition-colors">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            {/* Stats panel */}
-            {selectedPersonXp && (
-              <div className="px-6 py-4 border-b border-border space-y-3 shrink-0">
-                {/* Stat pills */}
-                <div className="flex flex-wrap gap-2">
-                  {selectedPersonXp.joinedAt && (
-                    <div className="bg-muted rounded-lg px-3 py-2 text-sm">
-                      <span className="text-muted-foreground">Joined </span>
-                      <span className="font-medium">{new Date(selectedPersonXp.joinedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
-                    </div>
-                  )}
-                  <div className="bg-muted rounded-lg px-3 py-2 text-sm">
-                    <span className="font-semibold">{selectedPersonXp.findsCount}</span>
-                    <span className="text-muted-foreground"> finds</span>
-                  </div>
-                  <div className="bg-muted rounded-lg px-3 py-2 text-sm">
-                    <span className="font-semibold">{selectedPersonXp.likesReceivedCount}</span>
-                    <span className="text-muted-foreground"> likes received</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openFollowList(selectedPerson.id, selectedPerson.name, "followers")}
-                    className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
-                  >
-                    <span className="font-semibold">{selectedPersonXp.followersCount}</span>
-                    <span className="text-muted-foreground">followers</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openFollowList(selectedPerson.id, selectedPerson.name, "following")}
-                    className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors cursor-pointer"
-                  >
-                    <span className="font-semibold">{selectedPerson.followingCount}</span>
-                    <span className="text-muted-foreground">following</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                </div>
-                {/* Level + streak row */}
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
-                    {selectedPersonXp.level}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-sm">{selectedPersonXp.levelName}</span>
-                    {selectedPersonXp.currentStreak > 0 && (
-                      <span className="ml-3 inline-flex items-center gap-1 text-sm text-muted-foreground">
-                        <Flame className="h-4 w-4 text-orange-500" />
-                        {selectedPersonXp.currentStreak}-day streak
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="overflow-y-auto p-5">
-              {findsLoading && (
-                <div className="py-12 text-center text-muted-foreground">Loading...</div>
-              )}
-              {!findsLoading && selectedPersonFinds.length === 0 && (
-                <div className="py-12 text-center text-muted-foreground">No music posted yet.</div>
-              )}
-              {!findsLoading && selectedPersonFinds.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {selectedPersonFinds.map((find) => (
-                    <a
-                      key={find.id}
-                      href={find.spotifyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group/card block rounded-xl border border-border bg-background overflow-hidden hover:border-primary/40 hover:shadow-md transition-all duration-200"
-                    >
-                      <div className="relative aspect-square w-full bg-muted">
-                        {find.imageUrl ? (
-                          <Image
-                            src={find.imageUrl}
-                            alt={`${find.title} by ${find.artist}`}
-                            fill
-                            className="object-cover transition-transform duration-300 group-hover/card:scale-105"
-                            sizes="(max-width: 640px) 50vw, 25vw"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <span className="text-muted-foreground text-xs">No cover</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-2.5">
-                        {find.genre && (
-                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white mb-1.5 ${getGenreColor(find.genre)}`}>
-                            {find.genre}
-                          </span>
-                        )}
-                        <p className="font-semibold text-sm line-clamp-1">{find.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{find.artist}</p>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* My Profile modal (from leaderboard own-row click) */}
-      {myProfileOpen && (
-        <UserProfileModal
-          userId={user.id}
-          userName={userName}
-          isOwnProfile={true}
-          onClose={() => setMyProfileOpen(false)}
-        />
-      )}
-
-      {/* Followers / Following list modal */}
-      {followListModal && (
-        <div
-          className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setFollowListModal(null); }}
-        >
-          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm max-h-[60vh] flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-              <h3 className="font-semibold text-base">
-                {followListModal.type === "followers"
-                  ? `${followListModal.userName ?? "User"}'s followers`
-                  : `${followListModal.userName ?? "User"} is following`}
-              </h3>
-              <button onClick={() => setFollowListModal(null)} aria-label="Close" className="p-1.5 rounded-lg hover:bg-accent transition-colors">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 py-1">
-              {followListModal.loading && (
-                <div className="py-10 text-center text-muted-foreground text-sm">Loading…</div>
-              )}
-              {!followListModal.loading && followListModal.users.length === 0 && (
-                <div className="py-10 text-center text-muted-foreground text-sm">Nobody here yet.</div>
-              )}
-              {!followListModal.loading && followListModal.users.map((u) => (
-                <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted transition-colors">
-                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-foreground font-bold text-sm shrink-0">
-                    {(u.name || "?")[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {u.name || "Unnamed User"}
-                      {u.isOwnProfile && <span className="ml-1.5 text-xs text-muted-foreground font-normal">(you)</span>}
-                    </p>
-                  </div>
-                  {!u.isOwnProfile && (
-                    <button
-                      type="button"
-                      onClick={() => toggleFollowInList(u.id, u.isFollowing)}
-                      className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                        u.isFollowing
-                          ? "border-border text-foreground hover:bg-muted"
-                          : "bg-foreground text-background border-transparent hover:opacity-90"
-                      }`}
-                    >
-                      {u.isFollowing ? "Unfollow" : "Follow"}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
