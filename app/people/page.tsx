@@ -210,7 +210,7 @@ export default function PeoplePage() {
                     {filtered.map((person) => (
                       <Link
                         key={person.id}
-                        href={`/people/${person.id}`}
+                        href={`/people/${encodeURIComponent(person.name || person.id)}`}
                         className="group text-left rounded-2xl border-0 bg-card p-5 hover:bg-muted hover:shadow-lg hover:scale-[1.02] transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 duration-500 block"
                       >
                         <div className="flex items-center gap-3 mb-3">
@@ -293,7 +293,7 @@ export default function PeoplePage() {
                     return (
                       <Link
                         key={entry.userId}
-                        href={`/people/${entry.userId}`}
+                        href={`/people/${encodeURIComponent(entry.name || entry.userId)}`}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left hover:opacity-90 ${
                           medal
                             ? medal.card

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Check, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { apiFetch } from "@/lib/api-fetch";
 
@@ -29,8 +29,30 @@ export default function SignupPage() {
     confirmPassword: "",
   });
 
+  // Name availability check
+  const [nameStatus, setNameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const nameDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const name = formData.name.trim();
+    if (!name) { setNameStatus("idle"); return; }
+    setNameStatus("checking");
+    if (nameDebounce.current) clearTimeout(nameDebounce.current);
+    nameDebounce.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-name?name=${encodeURIComponent(name)}`);
+        const data = await res.json();
+        setNameStatus(data.available ? "available" : "taken");
+      } catch {
+        setNameStatus("idle");
+      }
+    }, 400);
+    return () => { if (nameDebounce.current) clearTimeout(nameDebounce.current); };
+  }, [formData.name]);
+
   const allFieldsFilled =
     formData.name.trim() !== "" &&
+    nameStatus === "available" &&
     formData.email.trim() !== "" &&
     formData.password !== "" &&
     formData.confirmPassword !== "" &&
@@ -42,6 +64,11 @@ export default function SignupPage() {
 
     if (!formData.name.trim()) {
       setError("Name is required");
+      return;
+    }
+
+    if (nameStatus === "taken") {
+      setError("That name is already taken. Please choose another.");
       return;
     }
 
@@ -86,11 +113,16 @@ export default function SignupPage() {
       }
 
       if (data.session) {
-        await apiFetch("/api/auth/ensure-profile", { method: "POST" });
+        const profileRes = await apiFetch("/api/auth/ensure-profile", { method: "POST" });
+        if (profileRes.status === 409) {
+          setError("That name was just taken. Please choose another.");
+          setNameStatus("taken");
+          setLoading(false);
+          return;
+        }
         router.push("/");
         router.refresh();
       } else {
-        // Capture email at submit time — frozen, never changes in confirmation box
         setSentEmail(formData.email);
         setEmailSent(true);
         setLoading(false);
@@ -166,17 +198,40 @@ export default function SignupPage() {
               <label htmlFor="name" className="block text-sm font-medium mb-1">
                 Name
               </label>
-              <input
-                id="name"
-                type="text"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-                placeholder="Your name"
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
-              />
+              <div className="relative">
+                <input
+                  id="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                  placeholder="Your name"
+                  className={`w-full px-3 py-2 pr-9 bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50 transition-colors ${
+                    nameStatus === "taken"
+                      ? "border-red-500 focus:ring-red-500"
+                      : nameStatus === "available"
+                      ? "border-green-500 focus:ring-green-500"
+                      : "border-border"
+                  }`}
+                />
+                {nameStatus === "checking" && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">…</span>
+                )}
+                {nameStatus === "available" && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                )}
+                {nameStatus === "taken" && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                )}
+              </div>
+              {nameStatus === "taken" && (
+                <p className="mt-1 text-xs text-red-500">That name is already taken</p>
+              )}
+              {nameStatus === "available" && (
+                <p className="mt-1 text-xs text-green-500">Name is available</p>
+              )}
             </div>
 
             <div>

@@ -6,9 +6,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: userId } = await params;
+    const { id: param } = await params;
+    // Accept either a UUID (id) or a name
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param);
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: isUuid ? { id: param } : { name: param },
       select: { id: true, name: true },
     });
     if (!user) {

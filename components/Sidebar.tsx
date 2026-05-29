@@ -168,7 +168,7 @@ export default function Sidebar() {
               <div className="p-3 space-y-2">
                 {/* Profile card — navigates to own profile page */}
                 <Link
-                  href={`/people/${user.id}`}
+                  href={`/people/${encodeURIComponent(userName)}`}
                   onClick={() => setIsMobileOpen(false)}
                   className="w-full rounded-lg hover:bg-accent transition-colors text-left block"
                 >

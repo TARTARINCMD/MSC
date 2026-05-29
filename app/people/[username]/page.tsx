@@ -44,14 +44,19 @@ interface FollowUser {
   isFollowing: boolean;
 }
 
-export default function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: userId } = use(params);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username: usernameParam } = use(params);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
+  // Resolved real userId (may differ from param if param is a name)
+  const [userId, setUserId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("User");
+  const [notFound, setNotFound] = useState(false);
   const [finds, setFinds] = useState<UserFind[]>([]);
-  const [findsLoading, setFindsLoading] = useState(!getCached(`user-finds:${userId}`));
+  const [findsLoading, setFindsLoading] = useState(true);
   const [xpProfile, setXpProfile] = useState<XpProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -61,15 +66,34 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
     loading: boolean;
   } | null>(null);
 
-  // Load public data (works without auth)
+  // Step 1: resolve username param → real userId
   useEffect(() => {
-    // Fetch user name
-    fetch(`/api/users/${userId}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.name) setDisplayName(data.name); })
-      .catch(() => {});
+    setUserId(null);
+    setNotFound(false);
+    setFinds([]);
+    setXpProfile(null);
 
-    // Fetch finds (public)
+    fetch(`/api/users/${encodeURIComponent(usernameParam)}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: { id: string; name: string | null } | null) => {
+        if (!data) { setNotFound(true); return; }
+        // If param was a UUID (old link), redirect to clean username URL
+        if (UUID_RE.test(usernameParam) && data.name) {
+          router.replace(`/people/${encodeURIComponent(data.name)}`);
+          return;
+        }
+        setUserId(data.id);
+        if (data.name) setDisplayName(data.name);
+      })
+      .catch(() => setNotFound(true));
+  }, [usernameParam, router]);
+
+  // Step 2: load profile data once userId is known
+  useEffect(() => {
+    if (!userId) return;
+
+    setFindsLoading(!getCached(`user-finds:${userId}`));
+
     fetchSWR<UserFind[]>(
       `user-finds:${userId}`,
       () => fetch(`/api/users/${userId}/finds`).then((r) => r.ok ? r.json() : []),
@@ -77,7 +101,6 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       () => setFindsLoading(false),
     );
 
-    // Fetch XP profile (public)
     fetchSWR<XpProfile | null>(
       `user-xp:${userId}`,
       () => fetch(`/api/users/${userId}/xp`).then((r) => r.ok ? r.json() : null),
@@ -86,25 +109,20 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
     );
   }, [userId]);
 
-  // Load auth-specific data (isFollowing, own profile XP bar)
+  // Step 3: load auth-specific data once both userId and auth are ready
   useEffect(() => {
-    if (!user) return;
+    if (!user || !userId) return;
 
     const isOwn = user.id === userId;
     if (isOwn) {
-      // Re-fetch XP with the authenticated endpoint to get the XP bar
       fetchSWR<XpProfile | null>(
         "me-xp",
         () => apiFetch("/api/users/me/xp").then((r) => r.ok ? r.json() : null),
         (data) => { if (data) setXpProfile(data); },
         () => {},
       );
-      setDisplayName(
-        (typeof user.user_metadata?.name === "string" ? user.user_metadata.name : null) || displayName
-      );
     }
 
-    // Fetch people list to get isFollowing state
     fetchSWR<Array<{ id: string; name: string | null; isFollowing: boolean }>>(
       "people",
       () => apiFetch("/api/users").then((r) => r.ok ? r.json() : []),
@@ -117,10 +135,10 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
       },
       () => {},
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, user]);
 
   const toggleFollow = () => {
+    if (!userId) return;
     setIsFollowing((prev) => !prev);
     apiFetch(`/api/users/${userId}/follow`, { method: "POST" })
       .then((res) => { if (!res.ok) setIsFollowing((prev) => !prev); })
@@ -134,6 +152,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
   };
 
   const openFollowList = async (type: "followers" | "following") => {
+    if (!userId) return;
     const cacheKey = `user-${type}:${userId}`;
     const hasCached = !!getCached(cacheKey);
     setFollowList({ type, users: [], loading: !hasCached });
@@ -165,10 +184,22 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
     return new Date(isoDate).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
-  if (authLoading) {
+  if (authLoading || (!userId && !notFound)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Loading…</p>
+      </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-2xl font-bold mb-2">User not found</p>
+          <p className="text-muted-foreground mb-4">No one goes by that name.</p>
+          <Link href="/people" className="text-primary hover:underline">Back to People</Link>
+        </div>
       </div>
     );
   }
@@ -418,14 +449,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ id: stri
               {!followList.loading && followList.users.map((u) => (
                 <div key={u.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted transition-colors">
                   <Link
-                    href={`/people/${u.id}`}
+                    href={`/people/${encodeURIComponent(u.name || u.id)}`}
                     className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-foreground font-bold text-sm shrink-0 hover:ring-2 ring-primary transition-all"
                     onClick={() => setFollowList(null)}
                   >
                     {(u.name || "?")[0].toUpperCase()}
                   </Link>
                   <div className="flex-1 min-w-0">
-                    <Link href={`/people/${u.id}`} onClick={() => setFollowList(null)} className="hover:underline">
+                    <Link href={`/people/${encodeURIComponent(u.name || u.id)}`} onClick={() => setFollowList(null)} className="hover:underline">
                       <p className="font-medium text-sm truncate">
                         {u.name || "Unnamed User"}
                         {u.isOwnProfile && <span className="ml-1.5 text-xs text-muted-foreground font-normal">(you)</span>}

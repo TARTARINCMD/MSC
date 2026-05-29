@@ -26,6 +26,13 @@ export async function POST() {
         data: { id: user.id, ...(name !== null ? { name } : {}) },
       });
     } else {
+      // Check name uniqueness before upserting
+      if (name !== null) {
+        const nameConflict = await prisma.user.findUnique({ where: { name } });
+        if (nameConflict && nameConflict.id !== user.id) {
+          return NextResponse.json({ error: "NAME_TAKEN" }, { status: 409 });
+        }
+      }
       await prisma.user.upsert({
         where: { id: user.id },
         create: {
