@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useRef } from "react";
 import Masonry from "./Masonry";
 
 interface MasonryViewProps {
@@ -7,16 +8,24 @@ interface MasonryViewProps {
   onCardClick: (find: any) => void;
 }
 
+// Stable per-id heights — generated once, never change for the same id
+const heightCache = new Map<string, number>();
+
 export default function MasonryView({ finds, onCardClick }: MasonryViewProps) {
-  const masonryItems = finds.map((find) => ({
-    id: find.id,
-    img: find.imageUrl || 'https://via.placeholder.com/600x600?text=No+Image',
-    url: find.spotifyUrl,
-    spotifyUrl: find.spotifyUrl,
-    height: Math.random() * 400 + 300, // Random heights for masonry effect
-    title: find.title,
-    artist: find.artist,
-  }));
+  const masonryItems = useMemo(() => finds.map((find) => {
+    if (!heightCache.has(find.id)) {
+      heightCache.set(find.id, Math.random() * 400 + 300);
+    }
+    return {
+      id: find.id,
+      img: find.imageUrl || 'https://via.placeholder.com/600x600?text=No+Image',
+      url: find.spotifyUrl,
+      spotifyUrl: find.spotifyUrl,
+      height: heightCache.get(find.id)!,
+      title: find.title,
+      artist: find.artist,
+    };
+  }), [finds]);
 
   const estimatedHeight = Math.max(600, Math.ceil(finds.length / 4) * 280);
 

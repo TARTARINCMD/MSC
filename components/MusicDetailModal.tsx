@@ -23,7 +23,7 @@ interface MusicDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate?: () => void;
-  onCommentChange?: () => void;
+  onCommentChange?: (delta: number) => void;
   music: {
     id: string;
     title: string;
@@ -111,7 +111,7 @@ setIsEditing(false);
         setComments((prev) => [...prev, comment]);
         setNewComment("");
         setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-        onCommentChange?.();
+        onCommentChange?.(1);
       }
     } catch {
       // silently fail
@@ -126,7 +126,7 @@ setIsEditing(false);
       const response = await apiFetch(`/api/finds/${music.id}/comments/${commentId}`, { method: "DELETE" });
       if (response.ok) {
         setComments((prev) => prev.filter((c) => c.id !== commentId));
-        onCommentChange?.();
+        onCommentChange?.(-1);
       }
     } catch {
       // silently fail

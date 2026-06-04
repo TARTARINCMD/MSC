@@ -1,7 +1,7 @@
 "use client";
 
 import type { SpringOptions } from "motion/react";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion, useMotionValue, useSpring } from "motion/react";
 import "./TiltedCard.css";
 
@@ -42,6 +42,11 @@ export default function TiltedCard({
   overlayContent = null,
   displayOverlayContent = false,
 }: TiltedCardProps) {
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  useEffect(() => {
+    setIsTouchDevice(window.matchMedia("(hover: none)").matches);
+  }, []);
+
   const ref = useRef<HTMLElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -58,7 +63,7 @@ export default function TiltedCard({
   const lastY = useRef<number>(0);
 
   function handleMouse(e: React.MouseEvent<HTMLElement>) {
-    if (!ref.current) return;
+    if (!ref.current || isTouchDevice) return;
 
     const rect = ref.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left - rect.width / 2;
@@ -96,6 +101,24 @@ export default function TiltedCard({
     rotateFigcaption.set(0);
   }
 
+  if (isTouchDevice) {
+    return (
+      <figure
+        className="tilted-card-figure"
+        style={{ height: containerHeight, width: containerWidth }}
+      >
+        <div className="tilted-card-inner" style={{ width: imageWidth, height: imageHeight }}>
+          <img
+            src={imageSrc}
+            alt={altText}
+            className="tilted-card-img"
+            style={{ width: imageWidth, height: imageHeight }}
+          />
+        </div>
+      </figure>
+    );
+  }
+
   return (
     <figure
       ref={ref}
@@ -108,11 +131,6 @@ export default function TiltedCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {showMobileWarning && (
-        <div className="tilted-card-mobile-alert">
-          This effect is not optimized for mobile. Check on desktop.
-        </div>
-      )}
       <motion.div
         className="tilted-card-inner"
         style={{

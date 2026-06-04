@@ -141,6 +141,14 @@ export default function Home() {
     );
   }, []);
 
+  const handleCommentChange = useCallback((findId: string, delta: number) => {
+    setFinds((prevFinds) =>
+      prevFinds.map((find) =>
+        find.id === findId ? { ...find, commentCount: Math.max(0, (find.commentCount || 0) + delta) } : find
+      )
+    );
+  }, []);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleCardClick = useCallback((find: any) => {
     setSelectedMusic(find as SpotifyFindWithLikes);
@@ -292,7 +300,7 @@ export default function Home() {
           fetchFinds();
           setSelectedMusic(null);
         }}
-        onCommentChange={() => fetchFinds()}
+        onCommentChange={(delta) => selectedMusic && handleCommentChange(selectedMusic.id, delta)}
         music={selectedMusic}
         onLikeUpdate={handleLikeUpdate}
       />

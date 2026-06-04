@@ -3,7 +3,6 @@
 import { useState, useEffect, memo } from "react";
 import { useAuth } from "@/components/SupabaseAuthProvider";
 import type { SpotifyFind } from "@/lib/data";
-import TiltedCard from "./TiltedCard";
 import { Heart, MessageCircle, Play } from "lucide-react";
 import { getGenreColor } from "@/lib/genres";
 import { getPlatformFromUrl, getYouTubeThumbnailUrl } from "@/lib/streaming";
@@ -151,22 +150,12 @@ function FindCardWithTilt({ find, onTypeClick, onGenreClick, onLikeUpdate, onCar
       onClick={handleCardClick}
       className="block w-full h-full group cursor-pointer"
     >
-      <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-all duration-200 group-hover:bg-muted group-hover:scale-[1.02] group-hover:shadow-lg relative">
-        {/* TiltedCard first so buttons render on top */}
-        <div className="relative">
-          <TiltedCard
-            imageSrc={imageUrl}
-            altText={`${find.title} by ${find.artist}`}
-            captionText={`${find.title} - ${find.artist}`}
-            containerHeight="300px"
-            containerWidth="100%"
-            imageHeight="300px"
-            imageWidth="100%"
-            rotateAmplitude={12}
-            scaleOnHover={1.2}
-            showMobileWarning={false}
-            showTooltip={false}
-            displayOverlayContent={false}
+      <div className="rounded-lg bg-card p-4 h-full flex flex-col transition-all duration-200 group-hover:bg-muted group-hover:shadow-lg relative">
+        <div className="relative overflow-hidden rounded-lg" style={{ height: "300px" }}>
+          <img
+            src={imageUrl}
+            alt={`${find.title} by ${find.artist}`}
+            className="w-full h-full object-cover"
           />
         </div>
 

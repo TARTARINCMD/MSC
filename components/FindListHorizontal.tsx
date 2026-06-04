@@ -64,7 +64,7 @@ export default function FindListHorizontal({
           key={find.id}
           className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500"
           style={{
-            animationDelay: `${index * 50}ms`,
+            animationDelay: `${Math.min(index, 8) * 50}ms`,
             animationFillMode: "both",
           }}
         >
